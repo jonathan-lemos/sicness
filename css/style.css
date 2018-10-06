@@ -1,0 +1,39 @@
+.textbox {
+	border: 1px solid gray;
+	font: medium;
+	font-family: monospace;
+	overflow: auto;
+}
+
+#wrapper-top {
+	position: absolute;
+	height: 58.75%;
+	width: 98.75%;
+	margin-bottom: 1.25%;
+}
+
+#wrapper-bot {
+	position: absolute;
+	height: 38.75%;
+	width: 98.75%;
+	margin-top: 1.25%;
+	bottom: 0;
+}
+
+#editor {
+	position: absolute;
+	width: 47.5%;
+	height: 100%;
+	margin-left: 1.25%;
+	margin-right: 1.25%;
+	left: 0;
+}
+
+#output {
+	position: absolute;
+	width: 47.5%;
+	height: 100%;
+	margin-left: 1.25%;
+	margin-right: 1.25%;
+	right: 0;
+}
