@@ -205,7 +205,7 @@ class sic_control{
 	}
 
 	static convert(mnemonic: string, arg: string): number[] {
-		switch (string) {
+		switch (mnemonic) {
 			case "START":
 
 		}
@@ -265,6 +265,9 @@ class sic_split {
 				default:
 					this.width = 0;
 			}
+		}
+		else{
+			throw "opcode " + this.mnemonic + " is not recognized";
 		}
 	}
 }
