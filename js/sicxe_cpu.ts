@@ -271,8 +271,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["ADDR"] = (reg1, reg2) => {
-			this.__sic_validate_reg(reg1);
-			this.__sic_validate_reg(reg2);
+			this.__sic_dec_to_reg(reg1);
+			this.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] += this.registers[reg1];
 			this.__sic_correct_flow(reg2);
@@ -285,7 +285,7 @@ class sic_cpu {
 		}
 
 		this.opcodes["CLEAR"] = (reg) => {
-			this.__sic_validate_reg(reg);
+			this.__sic_dec_to_reg(reg);
 
 			this.registers[reg] = 0x0;
 		}
@@ -307,8 +307,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["COMPR"] = (reg1, reg2) => {
-			this.__sic_validate_reg(reg1);
-			this.__sic_validate_reg(reg2);
+			this.__sic_dec_to_reg(reg1);
+			this.__sic_dec_to_reg(reg2);
 
 			let x = this.registers["A"]
 			let y = this.registers["B"]
@@ -331,8 +331,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["DIVR"] = (reg1, reg2) => {
-			this.__sic_validate_reg(reg1);
-			this.__sic_validate_reg(reg2);
+			this.__sic_dec_to_reg(reg1);
+			this.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] = Math.floor(this.registers[reg2] / this.registers[reg1]);
 		}
@@ -424,8 +424,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["MULR"] = (reg1, reg2) => {
-			this.__sic_validate_reg(reg1);
-			this.__sic_validate_reg(reg2);
+			this.__sic_dec_to_reg(reg1);
+			this.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] *= this.registers[reg1];
 			this.__sic_correct_flow(reg2);
@@ -451,8 +451,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["RMO"] = (reg1, reg2) => {
-			this.__sic_validate_reg(reg1);
-			this.__sic_validate_reg(reg2);
+			this.__sic_dec_to_reg(reg1);
+			this.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] = this.registers[reg1];
 		}
@@ -461,11 +461,8 @@ class sic_cpu {
 			this.registers["PC"] = this.registers["L"];
 		}
 
-		this.opcodes["SHIFTL"] = (reg, n) => {
-			this.__sic_validate_reg(reg);
-			if (typeof n !== "number") {
-				throw "n must be a number";
-			}
+		this.opcodes["SHIFTL"] = (reg: number, n: number) => {
+			this.__sic_dec_to_reg(reg);
 
 			// circular shift. not regular bitshift
 			for (let i = 0; i < n; ++i) {
@@ -475,117 +472,109 @@ class sic_cpu {
 			}
 		}
 
-		this.opcodes["SHIFTR"] = (reg, n) => {
-			this.__sic_validate_reg(reg);
-			if (typeof n !== "number") {
-				throw "n must be a number";
-			}
+		this.opcodes["SHIFTR"] = (reg: number, n: number): void => {
+			this.__sic_dec_to_reg(reg);
 
 			// >> does sign extension, >>> does zero extension
 			this.registers[reg] >>= n;
 		}
 
-		this.opcodes["STA"] = (mem_loc) => {
+		this.opcodes["STA"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.__sic_place24(this.registers["A"], mem_loc);
 		}
 
-		this.opcodes["STB"] = (mem_loc) => {
+		this.opcodes["STB"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.__sic_place24(this.registers["B"], mem_loc);
 		}
 
-		this.opcodes["STCH"] = (mem_loc) => {
+		this.opcodes["STCH"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.__sic_place8(this.registers["A"] & 0xFF, mem_loc);
 		}
 
-		this.opcodes["STI"] = (mem_loc) => {
+		this.opcodes["STI"] = (mem_loc: number): void => {
 			throw "sti not implemented yet";
 		}
 
-		this.opcodes["STL"] = (mem_loc) => {
+		this.opcodes["STL"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.__sic_place24(this.registers["L"], mem_loc);
 		}
 
-		this.opcodes["STSW"] = (mem_loc) => {
+		this.opcodes["STSW"] = (mem_loc: number): void => {
 			throw "stsw not implemented yet";
 		}
 
-		this.opcodes["STT"] = (mem_loc) => {
+		this.opcodes["STT"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.__sic_place24(this.registers["T"], mem_loc);
 		}
 
-		this.opcodes["STX"] = (mem_loc) => {
+		this.opcodes["STX"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.__sic_place24(this.registers["X"], mem_loc);
 		}
 
-		this.opcodes["SUB"] = (mem_loc) => {
+		this.opcodes["SUB"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.registers["A"] -= this.__sic_deref24(mem_loc);
 			this.__sic_correct_flow("A");
 		}
 
-		this.opcodes["SUBR"] = (reg1, reg2) => {
-			this.__sic_validate_reg(reg1);
-			this.__sic_validate_reg(reg2);
+		this.opcodes["SUBR"] = (reg1: number, reg2: number): void => {
+			let r1 = this.__sic_dec_to_reg(reg1);
+			let r2 = this.__sic_dec_to_reg(reg2);
 
-			this.registers[reg2] -= this.registers[reg1];
-			this.__sic_correct_flow(reg2);
+			this.registers[r2] -= this.registers[r1];
+			this.__sic_correct_flow(r2);
 		}
 
-		this.opcodes["SVC"] = (n) => {
+		this.opcodes["SVC"] = (n: number): void => {
 			throw "svc not implemented yet";
 		}
 
-		this.opcodes["TD"] = (dev_name) => {
-			if (typeof dev_name !== "string") {
-				throw "dev_name must be a string";
-			}
+		this.opcodes["TD"] = (dev_name: string): void => {
 			if (this.devices[dev_name] === undefined) {
 				throw "dev " + dev_name + " does not exist";
 			}
 
 			if (this.devices[dev_name].writing) {
-				return true;
+				this.registers["SW"] = "=";
+				return;
 			}
-
-			if (this.devices[dev_name].contents[0] === undefined) {
-				return false;
+			else {
+				this.registers["SW"] = "<";
 			}
-			return true;
 		}
 
-		this.opcodes["TIX"] = (mem_loc) => {
+		this.opcodes["TIX"] = (mem_loc: number): void => {
 			this.__sic_validate_addr(mem_loc);
 
 			this.registers["X"]++;
 			this.opcodes["COMP"](mem_loc);
 		}
 
-		this.opcodes["TIXR"] = (reg) => {
-			this.__sic_validate_reg(reg);
+		this.opcodes["TIXR"] = (reg: number): void => {
+			let q = this.__sic_dec_to_reg(reg);
 
 			this.registers["X"]++;
 			this.opcodes["COMPR"](reg);
 		}
 
-		this.opcodes["WD"] = (dev_name) => {
+		this.opcodes["WD"] = (dev_name: string): void => {
 			this.__sic_validate_wrdev(dev_name);
 
 			(<sic_wrfile>this.devices[dev_name]).push(this.registers["A"] & 0xFF);
 		}
-
 	}
 
 	add_rddev(name: string, data: number[]): void {
@@ -624,12 +613,6 @@ class sic_cpu {
 	__sic_validate_addr(mem_loc: number): void {
 		if (mem_loc < 0x0 || mem_loc > this.max_addr) {
 			throw "mem_loc is outside the addressable range";
-		}
-	}
-
-	__sic_validate_reg(reg: string): void {
-		if (this.registers[reg] == null) {
-			throw "reg " + reg + " does not exist";
 		}
 	}
 
@@ -709,7 +692,9 @@ class sic_cpu {
 	}
 
 	__sic_correct_flow(reg: string): void {
-		this.__sic_validate_reg(reg);
+		if (this.registers["reg"] == null) {
+			throw "reg " + reg + " does not exist";
+		}
 
 		let x = this.registers["reg"];
 		while (x < 0xFFFFFF) {
@@ -717,5 +702,30 @@ class sic_cpu {
 		}
 		x %= 0xFFFFFF;
 		this.registers["reg"] = x;
+	}
+
+	__sic_dec_to_reg(reg: number): string {
+		switch (reg) {
+			case 0:
+				return "A";
+			case 1:
+				return "X";
+			case 2:
+				return "L";
+			case 3:
+				return "B";
+			case 4:
+				return "S";
+			case 5:
+				return "T";
+			case 6:
+				return "F";
+			case 8:
+				return "PC";
+			case 9:
+				return "SW";
+			default:
+				throw reg + " is not a valid register";
+		}
 	}
 }
