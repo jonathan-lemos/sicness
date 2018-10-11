@@ -3,9 +3,9 @@ class sic_bytecode {
 	format: number;
 
 	constructor(mnemonic: string) {
-		let format4flag = mnemonic.endsWith('+');
+		let format4flag = mnemonic.startsWith('+');
 		if (format4flag) {
-			mnemonic = mnemonic.slice(0, -1);
+			mnemonic = mnemonic.slice(1);
 		}
 
 		switch (mnemonic) {
@@ -191,17 +191,96 @@ class sic_bytecode {
 			this.format = 4;
 		}
 	}
+
+	static isBytecode(mnemonic: string): boolean {
+		let re = new RegExp("^\+?(ADD|ADDF|ADDR|AND|CLEAR|COMP|COMPF|DIV|DIVF|DIVR|FIX|FLOAT|HIO|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|MULR|NORM|OR|RD|RMO|RSUB|SHIFTL|SHIFTR|SIO|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|SUBR|SVC|TD|TIO|TIX|TIXR|WD)$");
+		return re.test(mnemonic);
+	}
 }
-class sic_split{
+
+class sic_control{
+	static isControl(mnemonic: string): boolean {
+		let re = new RegExp("^(START|END|RESW|RESB|WORD|BYTE)$");
+		return re.test(mnemonic);
+	}
+
+	static convert(mnemonic: string, arg: string): number[] {
+		switch (string) {
+			case "START":
+
+		}
+	}
+}
+class sic_split {
 	tag: string;
-	opcode: string;
+	mnemonic: string;
 	args: string[];
+	width: number;
 
 	constructor(line: string) {
 		let x = line.split(/\s+|\s*,\s*/);
 		this.tag = x[0];
-		this.opcode = x[1];
+		this.mnemonic = x[1];
 		this.args = x.slice(2);
+		if (sic_bytecode.isBytecode(this.mnemonic)) {
+			this.width = new sic_bytecode(this.mnemonic).format;
+			switch (this.width) {
+				case 1:
+					if (this.args.length !== 0) {
+						throw "opcode " + this.mnemonic + " cannot take any arguments";
+					}
+					break;
+				case 2:
+					if (this.args.length !== 2) {
+						throw "opcode " + this.mnemonic + " must take 2 arguments";
+					}
+					break;
+				case 3:
+				case 4:
+					if (this.args.length !== 1) {
+						throw "opcode " + this.mnemonic + " must take a single argument";
+					}
+					break;
+				default:
+					throw "invalid this.format";
+			}
+		}
+		else if (sic_control.isControl(this.mnemonic)) {
+			if (this.args.length !== 1) {
+				throw "control " + this.mnemonic + " must take a single argument";
+			}
+			switch (this.mnemonic) {
+				case "RESW":
+					this.width = 3 * parseInt(this.args[0]);
+					break;
+				case "RESB":
+					this.width = parseInt(this.args[0]);
+					break;
+				case "WORD":
+					this.width = 3;
+					break;
+				case "BYTE":
+					this.width = 1;
+					break;
+				default:
+					this.width = 0;
+			}
+		}
+	}
+}
+
+class sic_pass1 {
+	lines: sic_split[];
+	tags: number[];
+
+	constructor(lines: string[]) {
+		for (let i = 0; i < lines.length; ++i) {
+			let q = new sic_split(lines[i]);
+			this.lines.push(q);
+			if (q.tag !== "") {
+				this.tags[q.tag] = i;
+			}
+		}
 	}
 }
 
@@ -256,7 +335,7 @@ let __sic_reg_to_dec = (reg: string): number => {
 let __sic_format_2 = (mnemonic: string, reg1: string, reg2: string, n: number, i: number, x: number, b: number, p: number, e: number): number[] => {
 	let bytes = __sic_nixbpe(n, i, x, b, p, e);
 	let op = new sic_bytecode(mnemonic);
-	if (op.format !== 2){
+	if (op.format !== 2) {
 		throw "this opcode cannot be used with format 2";
 	}
 	bytes[0] = op.opcode;
@@ -270,7 +349,7 @@ let __sic_format_3_15bit = (mnemonic: string, address: number, n: number, i: num
 		throw "address is not within a 15-bit unsigned range";
 	}
 	let op = new sic_bytecode(mnemonic);
-	if (op.format !== 3){
+	if (op.format !== 3) {
 		throw "this opcode cannot be used with format 3";
 	}
 	let bytes = __sic_nixbpe(n, i, x, 0, 0, 0);
@@ -310,45 +389,7 @@ let __sic_format_4 = (mnemonic: string, address: number, n: number, i: number, x
 	return bytes;
 }
 
-let __sic_compile_pass1_bytec = (line: string) => {
-	let s = new sic_split(line);
-	let bytec = new sic_bytecode(s.opcode);
+let sic_compile = (lines: string[]): number[] => {
+	let pass1 = new sic_pass1(lines);
 
-	switch (bytec.format) {
-		case 1:
-			if (s.args.length != 0) {
-				throw "opcode " + s.opcode + " cannot take any arguments";
-			}
-			break;
-		case 2:
-			if (s.args.length != 2) {
-				throw "opcode " + s.opcode + " must take 2 arguments";
-			}
-			break;
-		case 3:
-		case 4:
-			if (s.args.length != 1) {
-				throw "opcode " + s.opcode + " must take a single argument";
-			}
-			break;
-		default:
-			throw "internal error: invalid format";
-	}
-	return bytec;
-}
-
-let __sic_compile_pass1 = (lines) => {
-	if (!Array.isArray(lines)) {
-		throw "lines must be an array of lines";
-	}
-
-	for (let i = 0; i < lines.length; ++i) {
-		try {
-			let x = __sic_compile_pass1_bytec(lines[i]);
-		}
-		catch (e) {
-			throw "Line " + (i + 1) + ": " + e.message;
-		}
-
-	}
 }
