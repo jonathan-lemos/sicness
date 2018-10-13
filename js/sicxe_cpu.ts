@@ -257,7 +257,7 @@ class sic_cpu {
 		this.registers["T"] = 0xFFFFFF; // general (xe only)
 		this.registers["F"] = 0xFFFFFF; // floating point (xe only)
 		this.registers["PC"] = 0x000000; // program-counter (instruction)
-		this.registers["SW"] = 0x000000; // status-word (flag)
+		this.registers["SW"] = '0'; // status-word (flag)
 		for (let i = 0; i <= max_addr; ++i) {
 			this.memory[i] = 0xFF;
 		}
@@ -271,8 +271,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["ADDR"] = (reg1, reg2) => {
-			this.__sic_dec_to_reg(reg1);
-			this.__sic_dec_to_reg(reg2);
+			sic_cpu.__sic_dec_to_reg(reg1);
+			sic_cpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] += this.registers[reg1];
 			this.__sic_correct_flow(reg2);
@@ -285,7 +285,7 @@ class sic_cpu {
 		}
 
 		this.opcodes["CLEAR"] = (reg) => {
-			this.__sic_dec_to_reg(reg);
+			sic_cpu.__sic_dec_to_reg(reg);
 
 			this.registers[reg] = 0x0;
 		}
@@ -307,8 +307,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["COMPR"] = (reg1, reg2) => {
-			this.__sic_dec_to_reg(reg1);
-			this.__sic_dec_to_reg(reg2);
+			sic_cpu.__sic_dec_to_reg(reg1);
+			sic_cpu.__sic_dec_to_reg(reg2);
 
 			let x = this.registers["A"]
 			let y = this.registers["B"]
@@ -331,8 +331,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["DIVR"] = (reg1, reg2) => {
-			this.__sic_dec_to_reg(reg1);
-			this.__sic_dec_to_reg(reg2);
+			sic_cpu.__sic_dec_to_reg(reg1);
+			sic_cpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] = Math.floor(this.registers[reg2] / this.registers[reg1]);
 		}
@@ -424,8 +424,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["MULR"] = (reg1, reg2) => {
-			this.__sic_dec_to_reg(reg1);
-			this.__sic_dec_to_reg(reg2);
+			sic_cpu.__sic_dec_to_reg(reg1);
+			sic_cpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] *= this.registers[reg1];
 			this.__sic_correct_flow(reg2);
@@ -444,15 +444,15 @@ class sic_cpu {
 			let ch = (<sic_rdfile>dev).get();
 
 			if (ch === undefined) {
-				throw "There is no data left in " + dev_name;
+				return 0x4; // EOF
 			}
 
 			this.opcodes["LDCH"](ch);
 		}
 
 		this.opcodes["RMO"] = (reg1, reg2) => {
-			this.__sic_dec_to_reg(reg1);
-			this.__sic_dec_to_reg(reg2);
+			sic_cpu.__sic_dec_to_reg(reg1);
+			sic_cpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] = this.registers[reg1];
 		}
@@ -462,7 +462,7 @@ class sic_cpu {
 		}
 
 		this.opcodes["SHIFTL"] = (reg: number, n: number) => {
-			this.__sic_dec_to_reg(reg);
+			sic_cpu.__sic_dec_to_reg(reg);
 
 			// circular shift. not regular bitshift
 			for (let i = 0; i < n; ++i) {
@@ -473,7 +473,7 @@ class sic_cpu {
 		}
 
 		this.opcodes["SHIFTR"] = (reg: number, n: number): void => {
-			this.__sic_dec_to_reg(reg);
+			sic_cpu.__sic_dec_to_reg(reg);
 
 			// >> does sign extension, >>> does zero extension
 			this.registers[reg] >>= n;
@@ -531,8 +531,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["SUBR"] = (reg1: number, reg2: number): void => {
-			let r1 = this.__sic_dec_to_reg(reg1);
-			let r2 = this.__sic_dec_to_reg(reg2);
+			let r1 = sic_cpu.__sic_dec_to_reg(reg1);
+			let r2 = sic_cpu.__sic_dec_to_reg(reg2);
 
 			this.registers[r2] -= this.registers[r1];
 			this.__sic_correct_flow(r2);
@@ -543,17 +543,8 @@ class sic_cpu {
 		}
 
 		this.opcodes["TD"] = (dev_name: string): void => {
-			if (this.devices[dev_name] === undefined) {
-				throw "dev " + dev_name + " does not exist";
-			}
-
-			if (this.devices[dev_name].writing) {
-				this.registers["SW"] = "=";
-				return;
-			}
-			else {
-				this.registers["SW"] = "<";
-			}
+			// THE DEVICE IS ALWAYS READY
+			this.registers["SW"] = '=';
 		}
 
 		this.opcodes["TIX"] = (mem_loc: number): void => {
@@ -564,7 +555,7 @@ class sic_cpu {
 		}
 
 		this.opcodes["TIXR"] = (reg: number): void => {
-			let q = this.__sic_dec_to_reg(reg);
+			let q = sic_cpu.__sic_dec_to_reg(reg);
 
 			this.registers["X"]++;
 			this.opcodes["COMPR"](reg);
@@ -704,7 +695,7 @@ class sic_cpu {
 		this.registers["reg"] = x;
 	}
 
-	__sic_dec_to_reg(reg: number): string {
+	static __sic_dec_to_reg(reg: number): string {
 		switch (reg) {
 			case 0:
 				return "A";

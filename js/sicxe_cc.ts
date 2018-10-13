@@ -1,8 +1,10 @@
 class sic_bytecode {
 	opcode: number;
 	format: number;
+	mnemonic: string;
 
 	constructor(mnemonic: string) {
+		this.mnemonic = mnemonic;
 		let format4flag = mnemonic.startsWith('+');
 		if (format4flag) {
 			mnemonic = mnemonic.slice(1);
@@ -198,116 +200,231 @@ class sic_bytecode {
 	}
 }
 
-class sic_control{
-	static isControl(mnemonic: string): boolean {
-		let re = new RegExp("^(START|END|RESW|RESB|WORD|BYTE)$");
+class sic_split{
+	tag: string;
+	op: string;
+	args: string[];
+	constructor(line: string){
+		let line_arr = line.split(/\s+|\s*,\s*/);
+		if (line_arr.length <= 1){
+			throw "line_arr does not have the required 2 entries";
+		}
+		this.tag = line_arr[0];
+		this.op = line_arr[1];
+		this.args = line_arr.slice(2);
+	}
+}
+
+class sic_directive{
+	mnemonic: string;
+	arg: string;
+
+	constructor(split: sic_split){
+		if (!sic_directive.isDirective(split.op)){
+			throw split.op + " is not a compiler directive";
+		}
+		this.mnemonic = split.op;
+		this.arg = split.args[0];
+	}
+
+	static isDirective(mnemonic: string): boolean {
+		return this.isCodeDirective(mnemonic) || this.isOtherDirective(mnemonic);
+	}
+
+	static isCodeDirective(mnemonic: string): boolean {
+		let re = new RegExp("^(RESW|RESB|WORD|BYTE)$");
 		return re.test(mnemonic);
 	}
 
-	static convert(mnemonic: string, arg: string): number[] {
-		switch (mnemonic) {
-			case "START":
+	static isOtherDirective(mnemonic: string): boolean {
+		let re = new RegExp("^(START|END)$");
+		return re.test(mnemonic);
+	}
 
+	length(): number {
+		switch (this.mnemonic){
+			case "RESW":
+				return 3 * parseInt(this.arg);
+			case "RESB":
+				return parseInt(this.arg);
+			case "WORD":
+				return 3;
+			case "BYTE":
+				return 1;
+			default:
+				throw "This opcode is not a code directive, so it doesn't have a length."
+		}
+	}
+
+	toBytecode(): number[] {
+		let a = [];
+		for (let i = 0; i < this.length(); ++i) {
+			a.push(0xFF);
+		}
+		return a;
+	}
+}
+
+enum sic_op_type {
+	register,
+	immediate,
+	direct,
+	indirect
+}
+class sic_operand {
+	val: number | string;
+	type: sic_op_type;
+	indexed: boolean;
+
+	constructor(val: number | string, type: sic_op_type, indexed: boolean) {
+		this.val = val;
+		this.type = type;
+		this.indexed = indexed;
+	}
+
+	static parse(arg: string): sic_operand {
+		let re_register = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$"); // CLEAR A
+		let re_decimal = new RegExp("^(#|@)?(\\d+)$");
+		let re_hex = new RegExp("^(#|@)?X'([0-9A-F]+)'$");
+		let re_tag = new RegExp("^(#|@)?([A-Z]+)$");
+
+		let get_type = (char: string): sic_op_type => {
+			switch (char) {
+				case "#":
+					return sic_op_type.immediate;
+				case "@":
+					return sic_op_type.indirect;
+				default:
+					return sic_op_type.direct;
+			}
+		}
+
+		let match: RegExpMatchArray;
+		if ((match = arg.match(re_register)) != null) {
+			return new sic_operand(match[1], sic_op_type.register, false);
+		}
+		else if ((match = arg.match(re_decimal)) != null) {
+			return new sic_operand(parseInt(match[2]), get_type(match[1]), false)
+		}
+		else if ((match = arg.match(re_hex)) != null) {
+			return new sic_operand(parseInt(match[2]), get_type(match[1]), false);
+		}
+		else if ((match = arg.match(re_tag)) != null) {
+			return new sic_operand(match[2], get_type(match[1]), false);
+		}
+		else {
+			throw "Operand " + arg + " is not of any valid format.";
 		}
 	}
 }
-class sic_split {
+class sic_instruction {
 	tag: string;
-	mnemonic: string;
-	args: string[];
-	width: number;
+	bytecode: sic_bytecode;
+	op1: sic_operand;
+	op2: sic_operand;
 
-	constructor(line: string) {
-		let x = line.split(/\s+|\s*,\s*/);
-		this.tag = x[0];
-		this.mnemonic = x[1];
-		this.args = x.slice(2);
-		if (sic_bytecode.isBytecode(this.mnemonic)) {
-			this.width = new sic_bytecode(this.mnemonic).format;
-			switch (this.width) {
-				case 1:
-					if (this.args.length !== 0) {
-						throw "opcode " + this.mnemonic + " cannot take any arguments";
-					}
-					break;
-				case 2:
-					if (this.args.length !== 2) {
-						throw "opcode " + this.mnemonic + " must take 2 arguments";
-					}
-					break;
-				case 3:
-				case 4:
-					if (this.args.length !== 1) {
-						throw "opcode " + this.mnemonic + " must take a single argument";
-					}
-					break;
-				default:
-					throw "invalid this.format";
-			}
+	constructor(split: sic_split) {
+		this.tag = split.tag;
+		this.bytecode = new sic_bytecode(split.op);
+
+		this.op1 = null;
+		this.op2 = null;
+		switch (split.args.length) {
+			case 0:
+				break;
+			case 2:
+				this.op2 = sic_operand.parse(split.args[1]);
+			// fall through
+			case 1:
+				this.op1 = sic_operand.parse(split.args[0]);
+				break;
+			default:
+				throw "This line has too many arguments.";
 		}
-		else if (sic_control.isControl(this.mnemonic)) {
-			if (this.args.length !== 1) {
-				throw "control " + this.mnemonic + " must take a single argument";
-			}
-			switch (this.mnemonic) {
-				case "RESW":
-					this.width = 3 * parseInt(this.args[0]);
-					break;
-				case "RESB":
-					this.width = parseInt(this.args[0]);
-					break;
-				case "WORD":
-					this.width = 3;
-					break;
-				case "BYTE":
-					this.width = 1;
-					break;
-				default:
-					this.width = 0;
-			}
+
+		switch (this.bytecode.format) {
+			case 1:
+				if (this.op1 !== null || this.op2 !== null) {
+					throw this.bytecode.mnemonic + " is a format 1 opcode, so it cannot take any parameters.";
+				}
+				break;
+			case 2:
+				if (this.op1 === null || this.op2 === null) {
+					throw this.bytecode.mnemonic + " is a format 2 opcode, so it requires 2 arguments";
+				}
+				break;
+			case 3:
+			case 4:
+				if (this.op1 === null) {
+					throw this.bytecode.mnemonic + " is a format 3/4 opcode, so it requires a single argument";
+				}
+				if (this.op2 !== null) {
+					// LDA VAL,X
+					if (this.op2.type === sic_op_type.register && this.op2.val === 1) {
+						this.op2 = null;
+						this.op1.indexed = true;
+					}
+					else {
+						throw this.bytecode.mnemonic + " is a format 3/4 opcode, so it requires a single argument";
+					}
+				}
+				break;
+			default:
+				throw "Internal error: invalid format";
+		}
+	}
+
+	toBytecode(tag_callback: (tag: string) => number): number[]{
+		let v1: number, v2: number;
+		let gen_nixbpe = (op: sic_operand, format4: boolean, baserel: boolean, pcrel: boolean): sic_nixbpe => {
+			let n = op.type === sic_op_type.indirect ? 1 : 0;
+			let i = op.type === sic_op_type.immediate ? 1 : 0;
+			let x = op.indexed ? 1 : 0;
+			let e = format4 ? 1 : 0;
+		}
+
+		if (typeof this.op1.val === "string"){
+			v1 = tag_callback(this.op1.val);
 		}
 		else{
-			throw "opcode " + this.mnemonic + " is not recognized";
+			v1 = this.op1.val;
+		}
+		if (typeof this.op2.val === "string"){
+			v2 = tag_callback(this.op2.val);
+		}
+		else{
+			v2 = this.op2.val;
+		}
+
+		switch (this.bytecode.format){
+			case 1:
+				return [ this.bytecode.opcode ];
+			case 2:
+				return __sic_format_2(this.bytecode.opcode, v1, v2);
 		}
 	}
 }
 
 class sic_pass1 {
-	lines: sic_split[];
+	lines: (sic_instruction | sic_directive)[];
 	tags: number[];
 
 	constructor(lines: string[]) {
 		for (let i = 0; i < lines.length; ++i) {
-			let q = new sic_split(lines[i]);
-			this.lines.push(q);
-			if (q.tag !== "") {
-				this.tags[q.tag] = i;
+			let split = new sic_split(lines[i]);
+			let s;
+			if (sic_directive.isDirective(split.op)){
+				s = new sic_directive(split);
+			}
+			else{
+				s = new sic_instruction(split);
+			}
+			this.lines.push(s);
+			if (s.tag !== "") {
+				this.tags[s.tag] = i;
 			}
 		}
 	}
-}
-
-let __sic_nixbpe = (n: number, i: number, x: number, b: number, p: number, e: number): number[] => {
-	let bytes = [0x0, 0x0];
-	if (n != 0) {
-		bytes[0] |= 0x2;
-	}
-	if (i != 0) {
-		bytes[0] |= 0x1;
-	}
-	if (x != 0) {
-		bytes[1] |= 0x80;
-	}
-	if (b != 0) {
-		bytes[1] |= 0x40;
-	}
-	if (p != 0) {
-		bytes[1] |= 0x20;
-	}
-	if (e != 0) {
-		bytes[1] |= 0x10;
-	}
-	return bytes;
 }
 
 let __sic_reg_to_dec = (reg: string): number => {
@@ -335,64 +452,138 @@ let __sic_reg_to_dec = (reg: string): number => {
 	}
 }
 
-let __sic_format_2 = (mnemonic: string, reg1: string, reg2: string, n: number, i: number, x: number, b: number, p: number, e: number): number[] => {
-	let bytes = __sic_nixbpe(n, i, x, b, p, e);
-	let op = new sic_bytecode(mnemonic);
-	if (op.format !== 2) {
-		throw "this opcode cannot be used with format 2";
+let __sic_validate_unsigned = (val: number, n_bits: number): void => {
+	let x = 0;
+	for (let i = 0; i < n_bits; ++i) {
+		x |= (1 << i);
 	}
-	bytes[0] = op.opcode;
-	bytes[1] |= (__sic_reg_to_dec(reg2) & 0x0F);
-	bytes[1] |= (__sic_reg_to_dec(reg1) & 0x0F) << 4;
+	if (val < 0x0 || val > x) {
+		throw "val does not fit in an unsigned " + n_bits + "-bit range";
+	}
+}
+
+let __sic_validate_signed = (val: number, n_bits: number): void => {
+	let x = 0;
+	for (let i = 0; i < n_bits - 1; ++i) {
+		x |= (1 << i);
+	}
+	if (val < -x - 1 || val > x) {
+		throw "val does not fit in a signed " + n_bits + "-bit range";
+	}
+}
+
+let __sic_validate_opcode = (opcode: number): void => {
+	__sic_validate_unsigned(opcode, 8);
+	if ((opcode & 0x03) !== 0) {
+		throw "the opcode's last 2 bits must be clear";
+	}
+}
+
+let __sic_format_2 = (opcode: number, arg1: number, arg2: number): number[] => {
+	__sic_validate_opcode(opcode);
+	__sic_validate_unsigned(arg1, 4);
+	__sic_validate_unsigned(arg2, 4);
+
+	let bytes = [0x00, 0x00];
+	bytes[0] = opcode;
+	bytes[1] |= (arg1 & 0x0F);
+	bytes[1] |= (arg2 & 0x0F) << 4;
 	return bytes;
 }
 
-let __sic_format_3_15bit = (mnemonic: string, address: number, n: number, i: number, x: number): number[] => {
-	if (address < 0x0 || address > 0x7FFF) {
-		throw "address is not within a 15-bit unsigned range";
+let __sic_format_3_15bit = (opcode: number, address: number, x: number): number[] => {
+	__sic_validate_opcode(opcode);
+	__sic_validate_unsigned(address, 15);
+
+	let bytes = [0x00, 0x00, 0x00];
+	bytes[0] = opcode;
+	bytes[1] = (address & 0x7F00 >>> 8);
+	if (x !== 0){
+		bytes[1] |= 0x80;
 	}
-	let op = new sic_bytecode(mnemonic);
-	if (op.format !== 3) {
-		throw "this opcode cannot be used with format 3";
-	}
-	let bytes = __sic_nixbpe(n, i, x, 0, 0, 0);
-	bytes[1] |= (address & 0x7F00 >>> 8);
 	bytes[2] = (address & 0xFF);
 	return bytes;
 }
 
-let __sic_format_3 = (mnemonic: string, offset: number, n: number, i: number, x: number, b: number, p: number, e: number): number[] => {
-	if (offset < -0x800 || offset > 0x7FF) {
-		throw "offset is too big to fit in a signed 12-bit range";
+let __sic_format_3 = (opcode: number, offset: number, nixbpe: sic_nixbpe): number[] => {
+	__sic_validate_opcode(opcode);
+	__sic_validate_signed(offset, 12);
+	if (offset < 0x0) {
+		offset += 0xFFF;
 	}
 
-	let op = new sic_bytecode(mnemonic);
-	if (op.format !== 3) {
-		throw "the specified opcode cannot be used with format 3";
-	}
-
-	let bytes = __sic_nixbpe(n, i, x, b, p, e);
-	bytes[0] |= (op.opcode & 0xFC);
-	bytes[1] |= (offset & 0xF00 >>> 8);
+	let bytes = nixbpe.toBytes();
+	bytes[0] |= (opcode & 0xFC);
+	bytes[1] |= (offset & 0x0F00 >>> 8);
 	bytes[2] = (offset & 0xFF);
 	return bytes;
 }
 
-let __sic_format_4 = (mnemonic: string, address: number, n: number, i: number, x: number, b: number, p: number, e: number): number[] => {
-	if (address < 0x0 || address > 0xFFFFF) {
-		throw "offset is too big to fit in an unsigned 20-bit range";
-	}
+let __sic_format_4 = (opcode: number, address: number, nixbpe: sic_nixbpe): number[] => {
+	__sic_validate_opcode(opcode);
+	__sic_validate_unsigned(address, 20);
 
-	let bytes = __sic_nixbpe(n, i, x, b, p, e);
-	let op = new sic_bytecode(mnemonic);
-	bytes[0] |= (op.opcode & 0xFC);
-	bytes[1] |= (address & 0xF0000);
-	bytes[2] = (address & 0xFF00);
+	let bytes = nixbpe.toBytes();
+	bytes[0] |= (opcode & 0xFC);
+	bytes[1] |= (address & 0x0F0000 >>> 16);
+	bytes[2] = (address & 0xFF00 >>> 8);
 	bytes[3] = (address & 0xFF);
 	return bytes;
 }
 
+class sic_nixbpe {
+	n: number;
+	i: number;
+	x: number;
+	b: number;
+	p: number;
+	e: number;
+
+	constructor(n: number, i: number, x: number, b: number, p: number, e: number) {
+		this.n = n;
+		this.i = i;
+		this.x = x;
+		this.b = b;
+		this.p = p;
+		this.e = e;
+	}
+
+	toBytes(): number[] {
+		let bytes = [0x0, 0x0];
+		if (this.n !== 0) {
+			bytes[0] |= 0x2;
+		}
+		if (this.i !== 0) {
+			bytes[0] |= 0x1;
+		}
+		if (this.x !== 0) {
+			bytes[1] |= 0x80;
+		}
+		if (this.b !== 0) {
+			bytes[1] |= 0x40;
+		}
+		if (this.p !== 0) {
+			bytes[1] |= 0x20;
+		}
+		if (this.e !== 0) {
+			bytes[1] |= 0x10;
+		}
+		return bytes;
+	}
+}
+
+let sic_compile_unf_format = (lines: string[]): number[] => {
+	let pass1 = new sic_pass1(lines);
+}
+
 let sic_compile = (lines: string[]): number[] => {
 	let pass1 = new sic_pass1(lines);
+	let ret = [];
 
+	if (pass1.lines[0].mnemonic === "START") {
+		return sic_compile_unf_format(lines);
+	}
+	for (let s of pass1.lines) {
+
+	}
 }
