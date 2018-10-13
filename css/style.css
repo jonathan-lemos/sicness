@@ -1,4 +1,16 @@
+/* i'm pretty sure that css was secretly designed by hitler to enact his revenge on the future generations.
+ * that means when you specify a percentage height, it doesn't take up that percent of the screen like it should.
+ * instead, it takes up that percentage of the height of the contents.
+ * this makes sure that they take up a percentage of the screen instead.
+ */
+html, body{
+	height: 100%;
+	width: 100%;
+	margin: 0;
+}
+
 .textbox {
+	box-sizing: border-box;
 	border: 1px solid gray;
 	font: medium;
 	font-family: monospace;
@@ -6,34 +18,29 @@
 }
 
 #wrapper-top {
-	position: absolute;
-	height: 58.75%;
-	width: 98.75%;
-	margin-bottom: 1.25%;
+	box-sizing: border-box;
+	border: 1px solid red;
+	width: 100%;
+	float: top;
 }
 
 #wrapper-bot {
-	position: absolute;
-	height: 38.75%;
-	width: 98.75%;
-	margin-top: 1.25%;
-	bottom: 0;
+	box-sizing: border-box;
+	border: 1px solid red;
+	height: 100%;
+	width: 100%;
+	float: bottom;
 }
 
 #editor {
-	position: absolute;
-	width: 47.5%;
+	width: 50%;
 	height: 100%;
-	margin-left: 1.25%;
-	margin-right: 1.25%;
-	left: 0;
+	float: left;
 }
 
 #output {
-	position: absolute;
-	width: 47.5%;
+	width: 50%;
 	height: 100%;
-	margin-left: 1.25%;
-	margin-right: 1.25%;
-	right: 0;
+	float: right;
+	overflow: hidden;
 }

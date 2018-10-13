@@ -218,8 +218,10 @@ class sic_split{
 class sic_directive{
 	mnemonic: string;
 	arg: string;
+	isInstruction: boolean;
 
 	constructor(split: sic_split){
+		this.isInstruction = false;
 		if (!sic_directive.isDirective(split.op)){
 			throw split.op + " is not a compiler directive";
 		}
@@ -316,14 +318,27 @@ class sic_operand {
 			throw "Operand " + arg + " is not of any valid format.";
 		}
 	}
+
+	getAddr(tag_callback: (tag: string) => number): number{
+		if (typeof this.val === "number"){
+			return this.val;
+		}
+		return tag_callback(this.val);
+	}
+
+	isTag(): boolean{
+		return typeof this.val === "string";
+	}
 }
 class sic_instruction {
 	tag: string;
 	bytecode: sic_bytecode;
 	op1: sic_operand;
 	op2: sic_operand;
+	isInstruction: boolean
 
 	constructor(split: sic_split) {
+		this.isInstruction = true;
 		this.tag = split.tag;
 		this.bytecode = new sic_bytecode(split.op);
 
@@ -374,49 +389,83 @@ class sic_instruction {
 		}
 	}
 
-	toBytecode(tag_callback: (tag: string) => number): number[]{
-		let v1: number, v2: number;
-		let gen_nixbpe = (op: sic_operand, format4: boolean, baserel: boolean, pcrel: boolean): sic_nixbpe => {
-			let n = op.type === sic_op_type.indirect ? 1 : 0;
-			let i = op.type === sic_op_type.immediate ? 1 : 0;
-			let x = op.indexed ? 1 : 0;
-			let e = format4 ? 1 : 0;
+	__bytecode2(tag_callback: (tag: string) => number): number[]{
+		if (this.op1 == null || this.op2 == null){
+			throw "__bytecode2() needs 2 arguments";
 		}
+		return __sic_format_2(this.bytecode.opcode, this.op1.getAddr(tag_callback), this.op2.getAddr(tag_callback));
+	}
 
-		if (typeof this.op1.val === "string"){
-			v1 = tag_callback(this.op1.val);
+	__bytecode3_4(pc: number, tag_callback: (tag: string) => number, format4: boolean): number[]{
+		if (this.op1 == null){
+			throw "__bytecode3() needs an argument";
 		}
-		else{
-			v1 = this.op1.val;
-		}
-		if (typeof this.op2.val === "string"){
-			v2 = tag_callback(this.op2.val);
-		}
-		else{
-			v2 = this.op2.val;
-		}
+		let n: number, i: number, x: number, b: number, p: number, e: number;
+		let pcrel_ptr = pc - this.op1.getAddr(tag_callback);
+		let direct_ptr = this.op1.getAddr(tag_callback);
+		let use_pcrel = this.op1.isTag();
 
+		x = this.op1.indexed ? 1 : 0;
+		b = 0;
+		e = 0;
+
+		if (use_pcrel){
+			n = 1;
+			i = 1;
+			p = 1;
+			return format4 ?
+			__sic_format_4(this.bytecode.opcode, pcrel_ptr, new sic_nixbpe(n, i, x, b, p, e)) :
+			__sic_format_3(this.bytecode.opcode, pcrel_ptr, new sic_nixbpe(n, i, x, b, p, e));
+		}
+		else {
+			n = 0;
+			i = 0;
+			p = 0;
+			return format4 ?
+			__sic_format_4(this.bytecode.opcode, direct_ptr, new sic_nixbpe(n, i, x, b, p, e)) :
+			__sic_format_3_15bit(this.bytecode.opcode, direct_ptr, x);
+		}
+	}
+
+	toBytecode(pc: number, tag_callback: (tag: string) => number): number[] {
 		switch (this.bytecode.format){
 			case 1:
 				return [ this.bytecode.opcode ];
 			case 2:
-				return __sic_format_2(this.bytecode.opcode, v1, v2);
+				return this.__bytecode2(tag_callback);
+			case 3:
+				return this.__bytecode3_4(pc, tag_callback, false);
+			case 4:
+				return this.__bytecode3_4(pc, tag_callback, true);
 		}
 	}
 }
 
+interface sic_line{
+	isInstruction: boolean;
+}
+
 class sic_pass1 {
-	lines: (sic_instruction | sic_directive)[];
+	lines: (sic_line)[];
 	tags: number[];
+
+	static __removecomments(line: string): string{
+		let re = new RegExp("'+$");
+		return line.replace(re, "");
+	}
 
 	constructor(lines: string[]) {
 		for (let i = 0; i < lines.length; ++i) {
+			let line = sic_pass1.__removecomments(lines[i]);
+			if (line.trim() === ""){
+				continue;
+			}
 			let split = new sic_split(lines[i]);
 			let s;
-			if (sic_directive.isDirective(split.op)){
+			if (sic_directive.isDirective(split.op)) {
 				s = new sic_directive(split);
 			}
-			else{
+			else {
 				s = new sic_instruction(split);
 			}
 			this.lines.push(s);
@@ -498,7 +547,7 @@ let __sic_format_3_15bit = (opcode: number, address: number, x: number): number[
 	let bytes = [0x00, 0x00, 0x00];
 	bytes[0] = opcode;
 	bytes[1] = (address & 0x7F00 >>> 8);
-	if (x !== 0){
+	if (x !== 0) {
 		bytes[1] |= 0x80;
 	}
 	bytes[2] = (address & 0xFF);
@@ -572,18 +621,31 @@ class sic_nixbpe {
 	}
 }
 
+/*
+//TODO
 let sic_compile_unf_format = (lines: string[]): number[] => {
 	let pass1 = new sic_pass1(lines);
 }
+*/
 
 let sic_compile = (lines: string[]): number[] => {
 	let pass1 = new sic_pass1(lines);
 	let ret = [];
-
-	if (pass1.lines[0].mnemonic === "START") {
-		return sic_compile_unf_format(lines);
+	let tag_callback = (tag: string): number => {
+		return pass1.tags[tag];
 	}
+	let pc = 0;
+
 	for (let s of pass1.lines) {
-
+		let bytes;
+		if (s.isInstruction){
+			bytes = (<sic_instruction>s).toBytecode(pc, tag_callback);
+		}
+		else{
+			bytes = (<sic_directive>s).toBytecode();
+		}
+		pc += bytes.length;
+		ret.concat(bytes);
 	}
+	return ret;
 }

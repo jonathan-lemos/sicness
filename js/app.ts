@@ -1,8 +1,8 @@
-function lm(id){
+let lm = (id: string): HTMLElement => {
 	return document.getElementById(id);
 }
 
-function onKeyDown(e){
+let onKeyDown = (e) => {
 	// if tab was pressed
 	if (e.keyCode === 9){
 		// do not tab out of the editor
@@ -14,7 +14,7 @@ function onKeyDown(e){
 	}
 }
 
-function htmlToArray(html){
+let htmlToArray = (html: string): string[] => {
 	var re1  = new RegExp("<div>", "g");
 	var re2  = new RegExp("</div>", "g");
 	var re3  = new RegExp("<br>", "g");
@@ -26,8 +26,7 @@ function htmlToArray(html){
 	return parsed;
 }
 
-/*
-function arrayToHtml(array){
+let arrayToHtml = (array: string[]): string => {
 	var s = "";
 	for (var i = 0; i < array.length - 1; ++i){
 		s += "<div>";
@@ -39,9 +38,8 @@ function arrayToHtml(array){
 	}
 	return s + "<div>" + array[array.length - 1] + "<br></div><br>";
 }
-*/
 
-lm("button_run").onclick = function (){
+lm("button_run").onclick = (): void => {
 	var html = lm("editor").innerHTML;
 	var arr = htmlToArray(html);
 }
