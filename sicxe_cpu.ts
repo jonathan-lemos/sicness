@@ -1,4 +1,11 @@
-class sic_opcode{
+/*
+ * Copyright (c) 2018 Jonathan Lemos
+ * 
+ * This software may be modified and distributed under the terms
+ * of the MIT license.  See the LICENSE file for details.
+*/
+
+export class sic_opcode{
 	mnemonic: string;
 	format: number;
 
@@ -184,7 +191,7 @@ class sic_opcode{
 	}
 }
 
-class sic_rdfile {
+export class sic_rdfile {
 	contents: number[];
 	reading: boolean;
 	writing: boolean;
@@ -208,7 +215,7 @@ class sic_rdfile {
 	}
 }
 
-class sic_wrfile {
+export class sic_wrfile {
 	contents: number[];
 	reading: boolean;
 	writing: boolean;
@@ -227,12 +234,12 @@ class sic_wrfile {
 	}
 }
 
-interface sic_file {
+export interface sic_file {
 	reading: boolean;
 	writing: boolean;
 }
 
-class sic_cpu {
+export class sic_cpu {
 	max_addr: number;
 	xe: boolean;
 	registers: number[];
