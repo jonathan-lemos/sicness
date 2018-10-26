@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Jonathan Lemos
+* Copyright (c) 2018 Jonathan Lemos
  * 
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
@@ -29,14 +29,11 @@ export const __sic_make_unsigned = (val: number, n_bits: number): number => {
 	return val;
 }
 
-export const __sic_parse_val = (val: string): number => {
-
-}
-
 export class sic_split {
 	tag: string;
 	op: string;
 	args: string;
+
 	constructor(line: string) {
 		let line_arr = line.split(/\s+/);
 		if (line_arr.length <= 1) {
@@ -44,7 +41,12 @@ export class sic_split {
 		}
 		this.tag = line_arr[0];
 		this.op = line_arr[1];
-		this.args = line_arr.slice(2).reduce((acc, val) => acc + val);
+		if (line_arr.length >= 3) {
+			this.args = line_arr.slice(2).reduce((acc, val) => acc + val);
+		}
+		else{
+			this.args = "";
+		}
 	}
 }
 
@@ -306,12 +308,12 @@ export class sic_bytecode {
 
 		// sanity check
 		__sic_check_unsigned(this.opcode, 8);
-		if ((this.opcode & 0x3) !== 0){
+		if ((this.opcode & 0x3) !== 0) {
 			throw "This is a bug. The last 2 bits of the opcode must be clear.";
 		}
 	}
 
-	length(): number{
+	length(): number {
 		return this.format;
 	}
 
@@ -334,18 +336,22 @@ export class sic_operand_f3 {
 	indexed: boolean;
 	pcrel: boolean;
 	baserel: boolean;
+	format4: boolean;
 
-	constructor(arg: string, basetag?: string) {
-		// TODO: implement char
-		let re_register = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$"); // CLEAR A
-		let re_decimal = new RegExp("^(#|@)?(\\d+)(,X)?$");
-		let re_hex = new RegExp("^(#|@)?X'([0-9A-F]+)'(,X)?$");
-		let re_char = new RegExp("^(#|@)?C'(.)'(,X)?$")
+	constructor(arg: string, format4: boolean, basetag?: string) {
+		let re_register = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$");
+		let re_decimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
+		let re_hex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
+		let re_char = new RegExp("^(=|#|@)?C'(.)'(,X)?$")
 		let re_tag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
+		let operand_len = format4 ? 20 : 12;
+
+		this.format4 = format4;
 
 		let get_type = (char: string): sic_op_type => {
 			switch (char) {
 				case "#":
+				case "=":
 					return sic_op_type.immediate;
 				case "@":
 					return sic_op_type.indirect;
@@ -363,20 +369,20 @@ export class sic_operand_f3 {
 			this.baserel = false;
 		}
 		else if ((match = arg.match(re_decimal)) !== null) {
-			this.val = parseInt(match[2])
+			this.val = __sic_make_unsigned(parseInt(match[2]), operand_len);
 			this.type = get_type(match[1])
 			this.indexed = match[3] != null;
 			this.pcrel = false;
 			this.baserel = false;
 		}
 		else if ((match = arg.match(re_hex)) !== null) {
-			this.val = parseInt(match[2], 16)
+			this.val = __sic_make_unsigned(parseInt(match[2], 16), operand_len)
 			this.type = get_type(match[1])
 			this.indexed = match[3] != null;
 			this.pcrel = false;
 			this.baserel = false;
 		}
-		else if ((match = arg.match(re_char)) !== null){
+		else if ((match = arg.match(re_char)) !== null) {
 			this.val = match[2].charCodeAt(0);
 			this.type = get_type(match[1]);
 			this.indexed = match[3] != null;
@@ -387,7 +393,7 @@ export class sic_operand_f3 {
 			this.val = match[2];
 			this.type = get_type(match[1])
 			this.indexed = match[3] != null;
-			if (basetag != null && this.val === basetag){
+			if (basetag != null && this.val === basetag) {
 				this.baserel = true;
 				this.pcrel = false;
 			}
@@ -401,24 +407,25 @@ export class sic_operand_f3 {
 		}
 	}
 
-	isTag(): boolean {
-		return typeof this.val === "string";
+	ready(): boolean {
+		return typeof this.val === "number";
 	}
 
-	convertTagToNumber(tag_callback: (tag: string) => number): void {
+	convertTag(loc: number, tag_callback: (tag: string) => number): void {
 		if (typeof this.val === "number") {
 			return;
 		}
-		this.val = tag_callback(this.val);
+		this.val = __sic_make_unsigned(loc - tag_callback(this.val), 12);
 	}
 
-	nixbpe(format4: boolean): number[] {
+	nixbpe(): number[] {
 		let n: boolean;
 		let i: boolean;
 		let x = this.indexed;
 		let b = this.baserel;
 		let p = this.pcrel;
-		let e = format4;
+		let e = this.format4;
+
 		switch (this.type) {
 			case sic_op_type.direct:
 				n = true;
@@ -460,7 +467,7 @@ export class sic_operand_f3 {
 	}
 }
 
-interface sic_instruction{
+interface sic_instruction {
 	ready(): boolean;
 	length(): number;
 	toBytes(): number[];
@@ -487,7 +494,7 @@ export class sic_format1 {
 	ready(): boolean {
 		return true;
 	}
-	
+
 	length(): number {
 		return 1;
 	}
@@ -564,13 +571,13 @@ export class sic_format3 {
 	bc: sic_bytecode;
 	op: sic_operand_f3;
 
-	constructor(line: sic_split) {
+	constructor(line: sic_split, basetag: string | undefined) {
 		if (!sic_format3.isFormat3(line.op)) {
 			throw line.op + " is not format 3";
 		}
 
 		this.bc = new sic_bytecode(line.op);
-		this.op = new sic_operand_f3(line.args);
+		this.op = new sic_operand_f3(line.args, false, basetag);
 	}
 
 	static isFormat3(mnemonic: string): boolean {
@@ -578,12 +585,12 @@ export class sic_format3 {
 		return re.test(mnemonic);
 	}
 
-	convertTag(tag_callback: (tag: string) => number): void {
-		this.op.convertTagToNumber(tag_callback);
+	convertTag(loc: number, tag_callback: (tag: string) => number): void {
+		this.op.convertTag(loc, tag_callback);
 	}
 
 	ready(): boolean {
-		return !this.op.isTag();
+		return !this.op.ready();
 	}
 
 	length(): number {
@@ -594,7 +601,7 @@ export class sic_format3 {
 		if (!this.ready()) {
 			throw "MY BODY IS NOT READY";
 		}
-		let bytes = this.op.nixbpe(false);
+		let bytes = this.op.nixbpe();
 		bytes[0] |= (this.bc.opcode & 0xFC);
 		bytes[1] |= (<number>this.op.val & 0x0F00 >>> 8);
 		bytes[2] = (<number>this.op.val & 0xFF);
@@ -606,13 +613,13 @@ export class sic_format4 {
 	bc: sic_bytecode;
 	op: sic_operand_f3;
 
-	constructor(line: sic_split) {
+	constructor(line: sic_split, basetag: string | undefined) {
 		if (!sic_format4.isFormat4(line.op)) {
 			throw line.op + " is not format 4";
 		}
 
 		this.bc = new sic_bytecode(line.op);
-		this.op = new sic_operand_f3(line.args);
+		this.op = new sic_operand_f3(line.args, true, basetag);
 	}
 
 	static isFormat4(mnemonic: string): boolean {
@@ -620,12 +627,12 @@ export class sic_format4 {
 		return re.test(mnemonic);
 	}
 
-	convertTag(tag_callback: (tag: string) => number): void {
-		this.op.convertTagToNumber(tag_callback);
+	convertTag(loc: number, tag_callback: (tag: string) => number): void {
+		this.op.convertTag(loc, tag_callback);
 	}
 
 	ready(): boolean {
-		return !this.op.isTag();
+		return !this.op.ready();
 	}
 
 	length(): number {
@@ -636,7 +643,7 @@ export class sic_format4 {
 		if (!this.ready()) {
 			throw "MY BODY IS NOT READY";
 		}
-		let bytes = this.op.nixbpe(true);
+		let bytes = this.op.nixbpe();
 		bytes[0] |= (this.bc.opcode & 0xFC);
 		bytes[1] |= (<number>this.op.val & 0x0F0000 >>> 16);
 		bytes[2] = (<number>this.op.val & 0xFF00 >>> 8);
@@ -716,10 +723,21 @@ export class sic_space {
 	}
 }
 
+export class sic_instr_line {
+	instr: sic_instruction;
+	loc: number;
+	tag: string;
+	constructor(instr: sic_instruction, loc: number, tag: string) {
+		this.instr = instr;
+		this.loc = loc;
+		this.tag = tag;
+	}
+}
+
 export class sic_tags {
 	tag_dict: IDictionary;
 
-	constructor(lines: sic_split[]) {
+	constructor(lines: sic_instr_line[]) {
 		this.tag_dict = {};
 		for (let i = 0; i < lines.length; ++i) {
 			if (lines[i].tag !== "") {
@@ -728,104 +746,139 @@ export class sic_tags {
 		}
 	}
 
-	getTag(tag: string): number {
-		return this.tag_dict[tag];
+	getTagLoc(lines: sic_instr_line[], tag: string): number {
+		return lines[this.tag_dict[tag]].loc;
 	}
 }
 
-export class sic_compiler {
+export class sic_pass1 {
 	tags: sic_tags;
-	lines: {instr: sic_instruction,
-		loc: number}[];
+	lines: sic_instr_line[];
 	startName: string | undefined;
-	startLoc: number | undefined;
+	locCurrent: number;
 	baseTag: string | undefined;
 
-	static __removecomments(line: string): string {
-		let re = new RegExp("\\.+$");
-		return line.replace(re, "");
-	}
-
-	static isDirective(mnemonic: string){
+	static isDirective(mnemonic: string) {
 		let re = new RegExp("^(START|END|BASE|NOBASE|LTORG)$");
 		return re.test(mnemonic);
 	}
 
-	applyDirective(mnemonic: string, arr: sic_split[], index: number) {
-		let parseNum = (str: string) => {
-			let re_dec = new RegExp("^(\\d)+$");
-			let re_hex = new RegExp("^X'([0-9A-Fa-f])'$");
-			let match: RegExpMatchArray | null;
-
-			if ((match = str.match(re_dec)) !== null){
-				return parseInt(match[1]);
-			}
-			else if ((match = str.match(re_hex)) !== null){
-				return parseInt(match[1], 16);
-			}
-			else{
-				throw str + " is not of any valid type"
-			}
-		}
-
-		if (!sic_compiler.isDirective(mnemonic)) {
-			throw mnemonic + " is not a directive.";
-		}
-		switch (mnemonic) {
-			case "START":
-				if (index !== 0) {
-					throw "START may only be the first line in a program";
-				}
-				this.startName = arr[0].tag;
-				this.startLoc = parseNum(arr[0].args);
-				break;
-			case "END":
-				if (index !== arr.length - 1){
-					throw "END may only be the last line in a program";
-				}
-				if (arr[index - 1].args !== this.startName){
-					throw "END's label must be the same as the start label";
-				}
-				// END does not actually do anything
-				break;
-			case "BASE":
-				this.baseTag = arr[index].args;
-				break;
-			case "NOBASE":
-				this.baseTag = undefined;
-				break;
-			case "LTORG":
-				// TODO
-				break;
-			default:
-				throw "not a valid mnemonic. this is an ultra mega bug";
-		}
-	}
-
 	constructor(lines: string[]) {
-		lines = lines.filter(str => sic_compiler.__removecomments(str).trim() !== "");
-		let arr = lines.map(val => new sic_split(val));
-		this.tags = new sic_tags(arr);
+		let splits = lines.map(str => str.replace(/\..+$/, "")).filter(str => str.trim() !== "").map(val => new sic_split(val));
+		let arr: (sic_instr_line | sic_split)[] = [];
 
 		this.lines = [];
-		let pc = 0;
+		this.locCurrent = 0;
+
+		arr = splits.map((val: sic_split) => {
+			let instr: sic_instr_line;
+			if (sic_pass1.isDirective(val.op)) {
+				return val;
+			}
+			else if (sic_format1.isFormat1(val.op)) {
+				instr = new sic_instr_line(new sic_format1(val), this.locCurrent, val.tag);
+			}
+			else if (sic_format2.isFormat2(val.op)) {
+				instr = new sic_instr_line(new sic_format2(val), this.locCurrent, val.tag);
+			}
+			else if (sic_format3.isFormat3(val.op)) {
+				instr = new sic_instr_line(new sic_format3(val, this.baseTag), this.locCurrent, val.tag);
+			}
+			else if (sic_format4.isFormat4(val.op)) {
+				instr = new sic_instr_line(new sic_format4(val, this.baseTag), this.locCurrent, val.tag);
+			}
+			else if (sic_space.isSpace(val.op)) {
+				instr = new sic_instr_line(new sic_space(val), this.locCurrent, val.tag);
+			}
+			else {
+				throw val.op + " is not of any recognized format.";
+			}
+
+			this.locCurrent += instr.instr.length();
+			return instr;
+		});
+
 		for (let i = 0; i < arr.length; ++i) {
-			if (sic_compiler.isDirective(arr[i].op)) {
-				this.applyDirective(arr[i].op, arr, i);
+			if (!(arr[i] instanceof sic_split)) {
+				this.lines.push(<sic_instr_line>arr[i]);
+				continue;
 			}
-			else if (sic_format1.isFormat1(arr[i].op)){
-				this.lines.push(new sic_format1(arr[i]));
+
+			let ss = <sic_split>arr[i];
+			if (!sic_pass1.isDirective(ss.op)) {
+				throw "internal error. ss must be directive";
 			}
-			else if (sic_format2.isFormat2(arr[i].op)){
-				this.lines.push(new sic_format2(arr[i]));
+
+			let parseNum = (str: string) => {
+				let re_dec = new RegExp("^[#=]?(\\d)+$");
+				let re_hex = new RegExp("^[#=]?X'([0-9A-Fa-f])'$");
+				let match: RegExpMatchArray | null;
+
+				if ((match = str.match(re_dec)) !== null) {
+					return parseInt(match[1]);
+				}
+				else if ((match = str.match(re_hex)) !== null) {
+					return parseInt(match[1], 16);
+				}
+				else {
+					throw str + " is not of any valid type"
+				}
 			}
-			else if (sic_format3.isFormat3(arr[i].op)){
-				this.lines.push(new sic_format3(arr[i]));
-			}
-			else if (sic_format4.isFormat4(arr[i].op)){
-				this.lines.push(new sic_format4(arr[i]));
+
+			switch (ss.op) {
+				case "START":
+					if (i !== 0) {
+						throw "START may only be the first line in a program";
+					}
+					this.startName = ss.tag;
+					this.locCurrent = parseNum(ss.args);
+					break;
+				case "END":
+					if (i !== splits.length - 1) {
+						throw "END may only be the last line in a program";
+					}
+					if (splits[i].args !== this.startName) {
+						throw "END's label must be the same as the start label";
+					}
+					// END does not actually do anything
+					break;
+				case "BASE":
+					this.baseTag = splits[i].args;
+					break;
+				case "NOBASE":
+					this.baseTag = undefined;
+					break;
+				case "LTORG":
+					// TODO
+					break;
+				default:
+					throw "not a valid mnemonic. this is an ultra mega bug";
 			}
 		}
+
+		this.tags = new sic_tags(this.lines);
+	}
+
+	toBytes(): number[][] {
+		let tag_callback = (tag: string): number => {
+			return this.tags.getTagLoc(this.lines, tag);
+		}
+		return this.lines.map(val => {
+			if (val.instr.ready()) {
+				return val.instr.toBytes();
+			}
+			if (val.instr instanceof sic_format3) {
+				let f3 = <sic_format3>(val.instr);
+				f3.convertTag(val.loc, tag_callback);
+				return f3.toBytes();
+			}
+			if (val.instr instanceof sic_format4) {
+				let f4 = <sic_format4>(val.instr);
+				f4.convertTag(val.loc, tag_callback);
+				return f4.toBytes();
+			}
+			throw "VAL IS NOT READY FOR BATTLE";
+		});
 	}
 }
 
@@ -877,56 +930,4 @@ export const __sic_dec_to_reg = (reg: number): string => {
 		default:
 			throw "reg no " + reg + " is not valid";
 	}
-}
-
-/*
-//TODO
-let sic_compile_unf_format = (lines: string[]): number[] => {
-	let pass1 = new sic_pass1(lines);
-}
-*/
-
-export const __sic_compile_line = (line: sic_split, tag_callback: (tag: string) => number): number[] => {
-	let op = line.op;
-	if (sic_bytecode.isBytecode(op)) {
-		let bc = new sic_bytecode(op);
-		let args = new sic_args(line.args, tag_callback, bc.format);
-		switch (bc.format) {
-			case 1:
-				return __sic_format_1(bc);
-			case 2:
-				return __sic_format_2(bc, args.ops[0], args.ops[1]);
-			case 3:
-				return __sic_format_3(bc, args.ops[0])
-			case 4:
-				return __sic_format_4(bc, args.ops[0]);
-			default:
-				throw "Invalid bc.format";
-		}
-	}
-	else if (sic_directive.isCodeDirective(op)) {
-		let d = new sic_directive(op);
-	}
-}
-
-export const sic_compile = (lines: string[]): number[] => {
-	let pass1 = new sic_pass1(lines);
-	let ret: number[] = [];
-	let tag_callback = (tag: string): number => {
-		return pass1.tags[tag];
-	}
-	let pc = 0;
-
-	for (let s of pass1.lines) {
-		let bytes;
-		if (s.isInstruction) {
-			bytes = (<sic_instruction>s).toBytecode(pc, tag_callback);
-		}
-		else {
-			bytes = (<sic_directive>s).toBytecode();
-		}
-		pc += bytes.length;
-		ret.concat(bytes);
-	}
-	return ret;
 }
