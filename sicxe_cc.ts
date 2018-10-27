@@ -5,27 +5,27 @@
  * of the MIT license.  See the LICENSE file for details.
 */
 
-export const __sic_check_unsigned = (val: number, n_bits: number): void => {
-	let mask = 0x0;
-	for (let i = 0; i < n_bits; ++i) {
-		mask |= (1 << i);
+export const __sic_make_mask = (n_bits: number): number => {
+	let m = 0x0;
+	for (let i = 0; i < n_bits; ++i){
+		m |= (1 << i);
 	}
-	if (val < 0x0 || val > mask){
+	return m;
+}
+
+export const __sic_check_unsigned = (val: number, n_bits: number): void => {
+	if (val < 0x0 || val > __sic_make_mask(n_bits)){
 		throw "val does not fit in an " + n_bits + "-bit range";
 	}
 }
 
 export const __sic_make_unsigned = (val: number, n_bits: number): number => {
-	let mask = 0x0;
-	for (let i = 0; i < n_bits; ++i) {
-		mask |= (1 << i);
+	if (val < -__sic_make_mask(n_bits - 1) - 1 || val > __sic_make_mask(n_bits)) {
+		throw val + " does not fit in an " + n_bits + "-bit range";
 	}
-	if (val < 0x0) {
-		val += (mask | n_bits);
-	}
-	if (val < 0x0 || val > mask) {
-		throw "val does not fit in an " + n_bits + "-bit range";
-	}
+
+	val >>>= 0;
+	val &= __sic_make_mask(n_bits);
 	return val;
 }
 
@@ -44,7 +44,7 @@ export class sic_split {
 		if (line_arr.length >= 3) {
 			this.args = line_arr.slice(2).reduce((acc, val) => acc + val);
 		}
-		else{
+		else {
 			this.args = "";
 		}
 	}
@@ -318,7 +318,7 @@ export class sic_bytecode {
 	}
 
 	static isBytecode(mnemonic: string): boolean {
-		let re = new RegExp("^\+?(ADD|ADDF|ADDR|AND|CLEAR|COMP|COMPF|DIV|DIVF|DIVR|FIX|FLOAT|HIO|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|MULR|NORM|OR|RD|RMO|RSUB|SHIFTL|SHIFTR|SIO|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|SUBR|SVC|TD|TIO|TIX|TIXR|WD)$");
+		let re = new RegExp("^\\+?(ADD|ADDF|ADDR|AND|CLEAR|COMP|COMPF|DIV|DIVF|DIVR|FIX|FLOAT|HIO|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|MULR|NORM|OR|RD|RMO|RSUB|SHIFTL|SHIFTR|SIO|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|SUBR|SVC|TD|TIO|TIX|TIXR|WD)$");
 		return re.test(mnemonic);
 	}
 }
@@ -405,6 +405,11 @@ export class sic_operand_f3 {
 		else {
 			throw "Operand " + arg + " is not of any valid format.";
 		}
+
+		if (this.format4){
+			this.baserel = false;
+			this.pcrel = false;
+		}
 	}
 
 	ready(): boolean {
@@ -415,7 +420,16 @@ export class sic_operand_f3 {
 		if (typeof this.val === "number") {
 			return;
 		}
-		this.val = __sic_make_unsigned(loc - tag_callback(this.val), 12);
+		let len = this.format4 ? 20 : 12;
+		if (this.baserel){
+			this.val = 0; //TODO
+		}
+		else if (this.pcrel){
+			this.val = __sic_make_unsigned(tag_callback(this.val) - loc, len);
+		}
+		else {
+			this.val = __sic_make_unsigned(tag_callback(this.val), len);
+		}
 	}
 
 	nixbpe(): number[] {
@@ -561,8 +575,8 @@ export class sic_format2 {
 	toBytes(): number[] {
 		let bytes = [0x00, 0x00];
 		bytes[0] = this.bc.opcode;
-		bytes[1] |= (this.op1 & 0x0F);
 		bytes[1] |= (this.op1 & 0x0F) << 4;
+		bytes[1] |= (this.op2 & 0x0F);
 		return bytes;
 	}
 }
@@ -571,7 +585,7 @@ export class sic_format3 {
 	bc: sic_bytecode;
 	op: sic_operand_f3;
 
-	constructor(line: sic_split, basetag: string | undefined) {
+	constructor(line: sic_split, basetag?: string | undefined) {
 		if (!sic_format3.isFormat3(line.op)) {
 			throw line.op + " is not format 3";
 		}
@@ -590,7 +604,7 @@ export class sic_format3 {
 	}
 
 	ready(): boolean {
-		return !this.op.ready();
+		return this.op.ready();
 	}
 
 	length(): number {
@@ -603,7 +617,7 @@ export class sic_format3 {
 		}
 		let bytes = this.op.nixbpe();
 		bytes[0] |= (this.bc.opcode & 0xFC);
-		bytes[1] |= (<number>this.op.val & 0x0F00 >>> 8);
+		bytes[1] |= (<number>this.op.val & 0x0F00) >>> 8;
 		bytes[2] = (<number>this.op.val & 0xFF);
 		return bytes;
 	}
@@ -613,17 +627,17 @@ export class sic_format4 {
 	bc: sic_bytecode;
 	op: sic_operand_f3;
 
-	constructor(line: sic_split, basetag: string | undefined) {
+	constructor(line: sic_split) {
 		if (!sic_format4.isFormat4(line.op)) {
 			throw line.op + " is not format 4";
 		}
 
 		this.bc = new sic_bytecode(line.op);
-		this.op = new sic_operand_f3(line.args, true, basetag);
+		this.op = new sic_operand_f3(line.args, true);
 	}
 
 	static isFormat4(mnemonic: string): boolean {
-		let re = new RegExp("^\+(ADD|ADDF|AND|COMP|COMPF|DIV|DIVF|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|OR|RD|RSUB|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|TD|TIX|WD)$");
+		let re = new RegExp("^\\+(ADD|ADDF|AND|COMP|COMPF|DIV|DIVF|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|OR|RD|RSUB|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|TD|TIX|WD)$");
 		return re.test(mnemonic);
 	}
 
@@ -632,7 +646,7 @@ export class sic_format4 {
 	}
 
 	ready(): boolean {
-		return !this.op.ready();
+		return this.op.ready();
 	}
 
 	length(): number {
@@ -645,8 +659,8 @@ export class sic_format4 {
 		}
 		let bytes = this.op.nixbpe();
 		bytes[0] |= (this.bc.opcode & 0xFC);
-		bytes[1] |= (<number>this.op.val & 0x0F0000 >>> 16);
-		bytes[2] = (<number>this.op.val & 0xFF00 >>> 8);
+		bytes[1] |= (<number>this.op.val & 0x0F0000) >>> 16;
+		bytes[2] = (<number>this.op.val & 0xFF00) >>> 8;
 		bytes[3] = (<number>this.op.val & 0xFF);
 		return bytes;
 	}
@@ -662,7 +676,7 @@ export class sic_space {
 		}
 		this.mnemonic = line.op;
 		let re_dec = new RegExp("^(\\d+)$");
-		let re_hex = new RegExp("^X'([0-9A-Fa-f])'$");
+		let re_hex = new RegExp("^X'([0-9A-Fa-f]+)'$");
 		let match: RegExpMatchArray | null;
 
 		if ((match = line.args.match(re_dec)) != null) {
@@ -765,96 +779,66 @@ export class sic_pass1 {
 
 	constructor(lines: string[]) {
 		let splits = lines.map(str => str.replace(/\..+$/, "")).filter(str => str.trim() !== "").map(val => new sic_split(val));
-		let arr: (sic_instr_line | sic_split)[] = [];
 
 		this.lines = [];
 		this.locCurrent = 0;
 
-		arr = splits.map((val: sic_split) => {
-			let instr: sic_instr_line;
-			if (sic_pass1.isDirective(val.op)) {
-				return val;
+		for (let i = 0; i < splits.length; ++i) {
+			let instr: sic_instr_line;	
+			if (sic_pass1.isDirective(splits[i].op)) {
+				switch (splits[i].op) {
+					case "START":
+						if (i !== 0) {
+							throw "START may only be the first line in a program";
+						}
+						this.startName = splits[i].tag;
+						this.locCurrent = parseInt(splits[i].args, 16);
+						break;
+					case "END":
+						if (i !== splits.length - 1) {
+							throw "END may only be the last line in a program";
+						}
+						if (splits[i].args !== this.startName) {
+							throw "END's label must be the same as the start label";
+						}
+						// END does not actually do anything
+						break;
+					case "BASE":
+						this.baseTag = splits[i].args;
+						break;
+					case "NOBASE":
+						this.baseTag = undefined;
+						break;
+					case "LTORG":
+						// TODO
+						break;
+					default:
+						throw "not a splits[i]id mnemonic. this is an ultra mega bug";
+				}
+				continue;
 			}
-			else if (sic_format1.isFormat1(val.op)) {
-				instr = new sic_instr_line(new sic_format1(val), this.locCurrent, val.tag);
+			else if (sic_format1.isFormat1(splits[i].op)) {
+				instr = new sic_instr_line(new sic_format1(splits[i]), this.locCurrent, splits[i].tag);
 			}
-			else if (sic_format2.isFormat2(val.op)) {
-				instr = new sic_instr_line(new sic_format2(val), this.locCurrent, val.tag);
+			else if (sic_format2.isFormat2(splits[i].op)) {
+				instr = new sic_instr_line(new sic_format2(splits[i]), this.locCurrent, splits[i].tag);
 			}
-			else if (sic_format3.isFormat3(val.op)) {
-				instr = new sic_instr_line(new sic_format3(val, this.baseTag), this.locCurrent, val.tag);
+			else if (sic_format3.isFormat3(splits[i].op)) {
+				instr = new sic_instr_line(new sic_format3(splits[i], this.baseTag), this.locCurrent, splits[i].tag);
 			}
-			else if (sic_format4.isFormat4(val.op)) {
-				instr = new sic_instr_line(new sic_format4(val, this.baseTag), this.locCurrent, val.tag);
+			else if (sic_format4.isFormat4(splits[i].op)) {
+				instr = new sic_instr_line(new sic_format4(splits[i]), this.locCurrent, splits[i].tag);
 			}
-			else if (sic_space.isSpace(val.op)) {
-				instr = new sic_instr_line(new sic_space(val), this.locCurrent, val.tag);
+			else if (sic_space.isSpace(splits[i].op)) {
+				instr = new sic_instr_line(new sic_space(splits[i]), this.locCurrent, splits[i].tag);
 			}
 			else {
-				throw val.op + " is not of any recognized format.";
+				throw splits[i].op + " is not of any recognized format.";
 			}
 
 			this.locCurrent += instr.instr.length();
-			return instr;
-		});
-
-		for (let i = 0; i < arr.length; ++i) {
-			if (!(arr[i] instanceof sic_split)) {
-				this.lines.push(<sic_instr_line>arr[i]);
-				continue;
-			}
-
-			let ss = <sic_split>arr[i];
-			if (!sic_pass1.isDirective(ss.op)) {
-				throw "internal error. ss must be directive";
-			}
-
-			let parseNum = (str: string) => {
-				let re_dec = new RegExp("^[#=]?(\\d)+$");
-				let re_hex = new RegExp("^[#=]?X'([0-9A-Fa-f])'$");
-				let match: RegExpMatchArray | null;
-
-				if ((match = str.match(re_dec)) !== null) {
-					return parseInt(match[1]);
-				}
-				else if ((match = str.match(re_hex)) !== null) {
-					return parseInt(match[1], 16);
-				}
-				else {
-					throw str + " is not of any valid type"
-				}
-			}
-
-			switch (ss.op) {
-				case "START":
-					if (i !== 0) {
-						throw "START may only be the first line in a program";
-					}
-					this.startName = ss.tag;
-					this.locCurrent = parseNum(ss.args);
-					break;
-				case "END":
-					if (i !== splits.length - 1) {
-						throw "END may only be the last line in a program";
-					}
-					if (splits[i].args !== this.startName) {
-						throw "END's label must be the same as the start label";
-					}
-					// END does not actually do anything
-					break;
-				case "BASE":
-					this.baseTag = splits[i].args;
-					break;
-				case "NOBASE":
-					this.baseTag = undefined;
-					break;
-				case "LTORG":
-					// TODO
-					break;
-				default:
-					throw "not a valid mnemonic. this is an ultra mega bug";
-			}
-		}
+			this.lines.push(instr);
+		};
 
 		this.tags = new sic_tags(this.lines);
 	}
@@ -863,6 +847,7 @@ export class sic_pass1 {
 		let tag_callback = (tag: string): number => {
 			return this.tags.getTagLoc(this.lines, tag);
 		}
+
 		return this.lines.map(val => {
 			if (val.instr.ready()) {
 				return val.instr.toBytes();
