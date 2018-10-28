@@ -34,15 +34,20 @@ const textToArray = (innerText) => {
     return innerText.split("\n");
 };
 const arrayToText = (array) => {
-    return array.reduce((acc, val) => acc + '\n' + val).slice(0, -1);
+    return array.reduce((acc, val) => acc + '\n' + val);
 };
 lm("button_run").onclick = () => {
-    let arr = textToArray(lm("editor").innerText);
-    let p1 = new cc.sic_pass1(arr);
-    let lines = [
-        "loc\tbytecode\tsource",
-        "---\t--------\t------"
-    ];
-    lines = lines.concat(p1.toLst().map(val => val.loc + '\t' + val.bytecode + '\t"' + val.instr + '"'));
-    lm("output").innerText = arrayToText(lines);
+    try {
+        let arr = textToArray(lm("editor").innerText);
+        let p1 = new cc.sic_pass1(arr);
+        let lines = [
+            "loc\tbytecode\tsource",
+            "---\t--------\t------"
+        ];
+        lines = lines.concat(p1.toLst().map(val => val.loc + '\t' + val.bytecode + '\t"' + val.instr + '"'));
+        lm("output").innerText = arrayToText(lines);
+    }
+    catch (e) {
+        alert(e);
+    }
 };

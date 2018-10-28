@@ -389,7 +389,14 @@ export class sic_operand_f3 {
             this.val = 0; //TODO
         }
         else if (this.pcrel) {
-            this.val = __sic_make_unsigned(tag_callback(this.val) - loc, len);
+            try {
+                this.val = __sic_make_unsigned(tag_callback(this.val) - loc, len);
+            }
+            // too big for pcrel, try direct
+            catch (e) {
+                this.pcrel = false;
+                this.val = __sic_make_unsigned(tag_callback(this.val), len);
+            }
         }
         else {
             this.val = __sic_make_unsigned(tag_callback(this.val), len);
@@ -665,7 +672,13 @@ export class sic_tags {
 export class sic_lst {
     constructor(loc, bytecode, instr) {
         this.loc = loc;
-        this.bytecode = bytecode;
+        if (bytecode.length <= 8) {
+            this.bytecode = bytecode;
+        }
+        // RESW 1000
+        else {
+            this.bytecode = "";
+        }
         this.instr = instr;
     }
 }
@@ -677,6 +690,7 @@ export class sic_pass1 {
     constructor(lines) {
         let splits = lines.map(str => str.replace(/\..+$/, "")).filter(str => str.trim() !== "").map(val => new sic_split(val));
         this.lines = [];
+        this.lst = [];
         let startName;
         let baseTag;
         let locCurrent = 0;
@@ -695,9 +709,11 @@ export class sic_pass1 {
                         if (i !== splits.length - 1) {
                             throw "END may only be the last line in a program";
                         }
+                        /*
                         if (splits[i].args !== startName) {
                             throw "END's label must be the same as the start label";
                         }
+                        */
                         // END does not actually do anything
                         break;
                     case "BASE":
@@ -745,30 +761,36 @@ export class sic_pass1 {
                 return;
             }
             else if (val.instr instanceof sic_format3) {
-                let f3 = (val.instr);
-                f3.convertTag(val.loc, tag_callback);
+                val.instr.convertTag(val.loc, tag_callback);
             }
             else if (val.instr instanceof sic_format4) {
-                let f4 = (val.instr);
-                f4.convertTag(val.loc, tag_callback);
+                val.instr.convertTag(val.loc, tag_callback);
+            }
+            else {
+                throw "all bodies were not ready. this is a bug";
             }
         });
+        for (let i = 0, j = 0; i < splits.length; ++i) {
+            if (sic_pass1.isDirective(splits[i].op)) {
+                this.lst.push(new sic_lst("", "", lines[i]));
+            }
+            else {
+                let l = this.lines[j];
+                let bc = "";
+                l.instr.toBytes().forEach(val => {
+                    let c = val.toString(16).toUpperCase();
+                    while (c.length < 2) {
+                        c = "0" + c;
+                    }
+                    bc += c;
+                });
+                this.lst.push(new sic_lst(l.loc.toString(16).toUpperCase(), bc, l.str));
+                j++;
+            }
+        }
     }
     toLst() {
-        return this.lines.map(val => {
-            let bc = "";
-            val.instr.toBytes().forEach(val => {
-                let c = val.toString(16).toUpperCase();
-                while (c.length < 2) {
-                    c = "0" + c;
-                }
-                bc += c;
-            });
-            while (bc.length < val.instr.length()) {
-                bc = " " + bc;
-            }
-            return new sic_lst(val.loc.toString(16).toUpperCase(), bc, val.str);
-        });
+        return this.lst;
     }
     toBytes() {
         return this.lines.map(val => val.instr.toBytes());

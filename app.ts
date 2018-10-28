@@ -57,6 +57,6 @@ lm("button_run").onclick = (): void => {
 		lm("output").innerText = arrayToText(lines);
 	}
 	catch (e){
-		alert(e.message);
+		alert(e);
 	}
 }
