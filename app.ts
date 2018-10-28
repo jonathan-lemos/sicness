@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2018 Jonathan Lemos
- * 
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
 */
 
-import * as sic_cc from "./sicxe_cc";
+import * as cc from "./sicxe_cc";
 
 const lm = (id: string): HTMLElement => {
 	let e = document.getElementById(id);
@@ -37,41 +37,26 @@ const onKeyDown = (e: any) => {
 	}
 }
 
-let htmlToArray = (html: string): string[] => {
-	let re1  = new RegExp("<div>", "g");
-	let re2  = new RegExp("</div>", "g");
-	let re3  = new RegExp("<br>", "g");
-
-	let parsed = html.replace(re1, "").replace(re2, "\n").replace(re3, "").split("\n");
-	if (re2.test(html)){
-		parsed.pop();
-	}
-	return parsed;
+const textToArray = (innerText: string): string[] => {
+	return innerText.split("\n");
 }
 
-let arrayToHtml = (array: string[]): string => {
-	let s = "";
-	for (let i = 0; i < array.length - 1; ++i){
-		s += "<div>";
-		s += array[i];
-		s += "</div>"
-	}
-	if (s === ""){
-		return "<div>" + array[0] + "</div><br>";
-	}
-	return s + "<div>" + array[array.length - 1] + "<br></div><br>";
-}
-
-let numbersToHex = (numbers: number[]): string => {
-	let s = ""
-	numbers.forEach((val: number) => {
-		s += val.toString(16);
-	});
-	return s;
+const arrayToText = (array: string[]): string => {
+	return array.reduce((acc, val) => acc + '\n' + val);
 }
 
 lm("button_run").onclick = (): void => {
-	let arr = htmlToArray(lm("editor").innerHTML);
-	let output = sic_cc.sic_compile(arr);
-	lm("output").innerHTML = numbersToHex(output);
+	try {
+		let arr = textToArray(lm("editor").innerText);
+		let p1 = new cc.sic_pass1(arr);
+		let lines = [
+			"loc\tbytecode\tsource",
+			"---\t--------\t------"
+		];
+		lines = lines.concat(p1.toLst().map(val => val.loc + '\t' + val.bytecode + '\t"' + val.instr + '"'));
+		lm("output").innerText = arrayToText(lines);
+	}
+	catch (e){
+		alert(e.message);
+	}
 }

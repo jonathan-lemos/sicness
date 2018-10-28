@@ -378,7 +378,7 @@ describe("pass1 tests", () => {
         expect(() => p1.tags.getTagLoc(p1.lines, "NOEX")).toThrow();
     });
 
-    test ("toBytes() test", () => {
+    test("toBytes() test", () => {
         let bytes = p1.toBytes();
         expect(bytes[0]).toEqual([0x01, 0x00, 0x04]);
         expect(bytes[1]).toEqual([0xAC, 0x30]);
@@ -386,5 +386,32 @@ describe("pass1 tests", () => {
         expect(bytes[3]).toEqual([0x6D, 0x1A, 0xBC, 0xDE]);
         expect(bytes[4]).toEqual([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
         expect(bytes[5]).toEqual([0x0F, 0x2F, 0xF1]);
+    });
+
+    test("toLst() test", () => {
+        let lst = p1.toLst();
+        expect(lst[0].loc).toEqual("A");
+        expect(lst[0].bytecode).toEqual("010004");
+        expect(lst[0].instr).toEqual(lines[1]);
+
+        expect(lst[1].loc).toEqual("D");
+        expect(lst[1].bytecode).toEqual("AC30");
+        expect(lst[1].instr).toEqual(lines[2]);
+
+        expect(lst[2].loc).toEqual("F");
+        expect(lst[2].bytecode).toEqual("C4");
+        expect(lst[2].instr).toEqual(lines[3]);
+
+        expect(lst[3].loc).toEqual("10");
+        expect(lst[3].bytecode).toEqual("6D1ABCDE");
+        expect(lst[3].instr).toEqual(lines[4]);
+
+        expect(lst[4].loc).toEqual("14");
+        expect(lst[4].bytecode).toEqual("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+        expect(lst[4].instr).toEqual(lines[5]);
+
+        expect(lst[5].loc).toEqual("23");
+        expect(lst[5].bytecode).toEqual("0F2FF1");
+        expect(lst[5].instr).toEqual(lines[6]);
     });
 });

@@ -33,6 +33,7 @@ export class sic_split {
 	tag: string;
 	op: string;
 	args: string;
+	str: string;
 
 	constructor(line: string) {
 		let line_arr = line.split(/\s+/);
@@ -47,6 +48,7 @@ export class sic_split {
 		else {
 			this.args = "";
 		}
+		this.str = line;
 	}
 }
 
@@ -741,10 +743,12 @@ export class sic_instr_line {
 	instr: sic_instruction;
 	loc: number;
 	tag: string;
-	constructor(instr: sic_instruction, loc: number, tag: string) {
+	str: string;
+	constructor(instr: sic_instruction, loc: number, tag: string, str: string) {
 		this.instr = instr;
 		this.loc = loc;
 		this.tag = tag;
+		this.str = str;
 	}
 }
 
@@ -765,12 +769,21 @@ export class sic_tags {
 	}
 }
 
+export class sic_lst{
+	loc: string;
+	bytecode: string;
+	instr: string;
+
+	constructor(loc: string, bytecode: string, instr: string){
+		this.loc = loc;
+		this.bytecode = bytecode;
+		this.instr = instr;
+	}
+}
+
 export class sic_pass1 {
 	tags: sic_tags;
 	lines: sic_instr_line[];
-	startName: string | undefined;
-	locCurrent: number;
-	baseTag: string | undefined;
 
 	static isDirective(mnemonic: string) {
 		let re = new RegExp("^(START|END|BASE|NOBASE|LTORG)$");
@@ -781,7 +794,9 @@ export class sic_pass1 {
 		let splits = lines.map(str => str.replace(/\..+$/, "")).filter(str => str.trim() !== "").map(val => new sic_split(val));
 
 		this.lines = [];
-		this.locCurrent = 0;
+		let startName: string | undefined;
+		let baseTag: string | undefined;
+		let locCurrent = 0;
 
 		for (let i = 0; i < splits.length; ++i) {
 			let instr: sic_instr_line;	
@@ -791,23 +806,23 @@ export class sic_pass1 {
 						if (i !== 0) {
 							throw "START may only be the first line in a program";
 						}
-						this.startName = splits[i].tag;
-						this.locCurrent = parseInt(splits[i].args, 16);
+						startName = splits[i].tag;
+						locCurrent = parseInt(splits[i].args, 16);
 						break;
 					case "END":
 						if (i !== splits.length - 1) {
 							throw "END may only be the last line in a program";
 						}
-						if (splits[i].args !== this.startName) {
+						if (splits[i].args !== startName) {
 							throw "END's label must be the same as the start label";
 						}
 						// END does not actually do anything
 						break;
 					case "BASE":
-						this.baseTag = splits[i].args;
+						baseTag = splits[i].args;
 						break;
 					case "NOBASE":
-						this.baseTag = undefined;
+						baseTag = undefined;
 						break;
 					case "LTORG":
 						// TODO
@@ -818,101 +833,117 @@ export class sic_pass1 {
 				continue;
 			}
 			else if (sic_format1.isFormat1(splits[i].op)) {
-				instr = new sic_instr_line(new sic_format1(splits[i]), this.locCurrent, splits[i].tag);
+				instr = new sic_instr_line(new sic_format1(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else if (sic_format2.isFormat2(splits[i].op)) {
-				instr = new sic_instr_line(new sic_format2(splits[i]), this.locCurrent, splits[i].tag);
+				instr = new sic_instr_line(new sic_format2(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else if (sic_format3.isFormat3(splits[i].op)) {
-				instr = new sic_instr_line(new sic_format3(splits[i], this.baseTag), this.locCurrent, splits[i].tag);
+				instr = new sic_instr_line(new sic_format3(splits[i], baseTag), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else if (sic_format4.isFormat4(splits[i].op)) {
-				instr = new sic_instr_line(new sic_format4(splits[i]), this.locCurrent, splits[i].tag);
+				instr = new sic_instr_line(new sic_format4(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else if (sic_space.isSpace(splits[i].op)) {
-				instr = new sic_instr_line(new sic_space(splits[i]), this.locCurrent, splits[i].tag);
+				instr = new sic_instr_line(new sic_space(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else {
 				throw splits[i].op + " is not of any recognized format.";
 			}
 
-			this.locCurrent += instr.instr.length();
+			locCurrent += instr.instr.length();
 			this.lines.push(instr);
 		};
 
-		this.tags = new sic_tags(this.lines);
-	}
+        this.tags = new sic_tags(this.lines);
 
-	toBytes(): number[][] {
-		let tag_callback = (tag: string): number => {
-			return this.tags.getTagLoc(this.lines, tag);
-		}
+        let tag_callback = (tag: string): number => {
+            return this.tags.getTagLoc(this.lines, tag);
+        }
 
-		return this.lines.map(val => {
-			if (val.instr.ready()) {
-				return val.instr.toBytes();
+        this.lines.forEach(val => {
+			if (val.instr.ready()){
+				return;
 			}
-			if (val.instr instanceof sic_format3) {
-				let f3 = <sic_format3>(val.instr);
-				f3.convertTag(val.loc, tag_callback);
-				return f3.toBytes();
+            else if (val.instr instanceof sic_format3) {
+                let f3 = <sic_format3>(val.instr);
+                f3.convertTag(val.loc, tag_callback);
+            }
+            else if (val.instr instanceof sic_format4) {
+                let f4 = <sic_format4>(val.instr);
+                f4.convertTag(val.loc, tag_callback);
+            }
+        });
+    }
+
+    toLst(): sic_lst[] {
+        return this.lines.map(val => {
+            let bc = "";
+			val.instr.toBytes().forEach(val => {
+				let c = val.toString(16).toUpperCase();
+				while (c.length < 2){
+					c = "0" + c;
+				}
+				bc += c;
+			});
+			while (bc.length < val.instr.length()){
+				bc = " " + bc;
 			}
-			if (val.instr instanceof sic_format4) {
-				let f4 = <sic_format4>(val.instr);
-				f4.convertTag(val.loc, tag_callback);
-				return f4.toBytes();
-			}
-			throw "VAL IS NOT READY FOR BATTLE";
-		});
-	}
+			return new sic_lst(val.loc.toString(16).toUpperCase(), bc, val.str);
+        });
+    }
+
+    toBytes(): number[][] {
+        return this.lines.map(val => val.instr.toBytes());
+    }
 }
 
 export const __sic_reg_to_dec = (reg: string): number => {
-	switch (reg) {
-		case "A":
-			return 0;
-		case "X":
-			return 1;
-		case "L":
-			return 2;
-		case "B":
-			return 3;
-		case "S":
-			return 4;
-		case "T":
-			return 5;
-		case "F":
-			return 6;
-		case "PC":
-			return 8;
-		case "SW":
-			return 9;
-		default:
-			throw "reg type " + reg + " is not valid";
-	}
+    switch (reg) {
+        case "A":
+            return 0;
+        case "X":
+            return 1;
+        case "L":
+            return 2;
+        case "B":
+            return 3;
+        case "S":
+            return 4;
+        case "T":
+            return 5;
+        case "F":
+            return 6;
+        case "PC":
+            return 8;
+        case "SW":
+            return 9;
+        default:
+            throw "reg type " + reg + " is not valid";
+    }
 }
 
 export const __sic_dec_to_reg = (reg: number): string => {
-	switch (reg) {
-		case 0:
-			return "A";
-		case 1:
-			return "X";
-		case 2:
-			return "L";
-		case 3:
-			return "B";
-		case 4:
-			return "S";
-		case 5:
-			return "T";
-		case 6:
-			return "F";
-		case 8:
-			return "PC";
-		case 9:
-			return "SW";
-		default:
-			throw "reg no " + reg + " is not valid";
-	}
+    switch (reg) {
+        case 0:
+            return "A";
+        case 1:
+            return "X";
+        case 2:
+            return "L";
+        case 3:
+            return "B";
+        case 4:
+            return "S";
+        case 5:
+            return "T";
+        case 6:
+            return "F";
+        case 8:
+            return "PC";
+        case 9:
+            return "SW";
+        default:
+            throw "reg no " + reg + " is not valid";
+    }
 }
