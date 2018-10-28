@@ -896,7 +896,7 @@ export class sic_pass1 {
 
 		for (let i = 0, j = 0; i < splits.length; ++i){
 			if (sic_pass1.isDirective(splits[i].op)){
-				this.lst.push(new sic_lst("", "", lines[i]));
+				this.lst.push(new sic_lst("", "", splits[i].str.trim()));
 			}
 			else{
 				let l = this.lines[j];
@@ -908,7 +908,7 @@ export class sic_pass1 {
 					}
 					bc += c;
 				});
-				this.lst.push(new sic_lst(l.loc.toString(16).toUpperCase(), bc, l.str));
+				this.lst.push(new sic_lst(l.loc.toString(16).toUpperCase(), bc, l.str.trim()));
 				j++;
 			}
 		}

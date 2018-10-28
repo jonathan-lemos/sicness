@@ -392,30 +392,30 @@ describe("pass1 tests", () => {
         let lst = p1.toLst();
         expect(lst[0].loc).toEqual("");
         expect(lst[0].bytecode).toEqual("");
-        expect(lst[0].instr).toEqual(lines[0]);
+        expect(lst[0].instr).toEqual(lines[0].trim());
 
         expect(lst[1].loc).toEqual("A");
         expect(lst[1].bytecode).toEqual("010004");
-        expect(lst[1].instr).toEqual(lines[1]);
+        expect(lst[1].instr).toEqual(lines[1].trim());
 
         expect(lst[2].loc).toEqual("D");
         expect(lst[2].bytecode).toEqual("AC30");
-        expect(lst[2].instr).toEqual(lines[2]);
+        expect(lst[2].instr).toEqual(lines[2].trim());
 
         expect(lst[3].loc).toEqual("F");
         expect(lst[3].bytecode).toEqual("C4");
-        expect(lst[3].instr).toEqual(lines[3]);
+        expect(lst[3].instr).toEqual(lines[3].trim());
 
         expect(lst[4].loc).toEqual("10");
         expect(lst[4].bytecode).toEqual("6D1ABCDE");
-        expect(lst[4].instr).toEqual(lines[4]);
+        expect(lst[4].instr).toEqual(lines[4].trim());
 
         expect(lst[5].loc).toEqual("14");
         expect(lst[5].bytecode).toEqual("");
-        expect(lst[5].instr).toEqual(lines[5]);
+        expect(lst[5].instr).toEqual(lines[5].trim());
 
         expect(lst[6].loc).toEqual("23");
         expect(lst[6].bytecode).toEqual("0F2FF1");
-        expect(lst[6].instr).toEqual(lines[6]);
+        expect(lst[6].instr).toEqual(lines[6].trim());
     });
 });

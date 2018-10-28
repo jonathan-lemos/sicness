@@ -36,16 +36,27 @@ const textToArray = (innerText) => {
 const arrayToText = (array) => {
     return array.reduce((acc, val) => acc + '\n' + val);
 };
+const formatLst = (array) => {
+    let locMax = 0, bcMax = 0;
+    array.forEach(val => {
+        if (val.loc.length > locMax) {
+            locMax = val.loc.length;
+        }
+        if (val.bytecode.length > bcMax) {
+            bcMax = val.bytecode.length;
+        }
+    });
+    let lines = [
+        "loc".padEnd(locMax, " ") + "\t" + "byte".padEnd(bcMax, " ") + "\t" + "source",
+        "".padEnd(locMax, "-") + "\t" + "".padEnd(bcMax, "-") + "\t" + "------"
+    ];
+    return lines.concat(array.map(val => val.loc.padEnd(locMax, " ") + "\t" + val.bytecode.padEnd(bcMax, " ") + "\t'" + val.instr + "'"));
+};
 lm("button_run").onclick = () => {
     try {
         let arr = textToArray(lm("editor").innerText);
         let p1 = new cc.sic_pass1(arr);
-        let lines = [
-            "loc\tbytecode\tsource",
-            "---\t--------\t------"
-        ];
-        lines = lines.concat(p1.toLst().map(val => val.loc + '\t' + val.bytecode + '\t"' + val.instr + '"'));
-        lm("output").innerText = arrayToText(lines);
+        lm("output").innerText = arrayToText(formatLst(p1.toLst()));
     }
     catch (e) {
         alert(e);
