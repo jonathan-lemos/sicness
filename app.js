@@ -36,6 +36,12 @@ const textToArray = (innerText) => {
 const arrayToText = (array) => {
     return array.reduce((acc, val) => acc + '\n' + val);
 };
+const pad = (str, len) => {
+    while (str.length < len) {
+        str = str + " ";
+    }
+    return str;
+};
 const formatLst = (array) => {
     let locMax = 0, bcMax = 0;
     array.forEach(val => {
@@ -47,10 +53,10 @@ const formatLst = (array) => {
         }
     });
     let lines = [
-        "loc".padEnd(locMax, " ") + "\t" + "byte".padEnd(bcMax, " ") + "\t" + "source",
-        "".padEnd(locMax, "-") + "\t" + "".padEnd(bcMax, "-") + "\t" + "------"
+        pad("loc", locMax) + "\t" + pad("byte", bcMax) + "\t" + "source",
+        pad("---", locMax) + "\t" + pad("----", bcMax) + "\t" + "------"
     ];
-    return lines.concat(array.map(val => val.loc.padEnd(locMax, " ") + "\t" + val.bytecode.padEnd(bcMax, " ") + "\t'" + val.instr + "'"));
+    return lines.concat(array.map(val => pad(val.loc, locMax) + "\t" + pad(val.bytecode, bcMax) + "\t'" + val.instr + "'"));
 };
 lm("button_run").onclick = () => {
     try {

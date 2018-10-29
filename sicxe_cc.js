@@ -709,11 +709,9 @@ export class sic_pass1 {
                         if (i !== splits.length - 1) {
                             throw "END may only be the last line in a program";
                         }
-                        /*
                         if (splits[i].args !== startName) {
                             throw "END's label must be the same as the start label";
                         }
-                        */
                         // END does not actually do anything
                         break;
                     case "BASE":
