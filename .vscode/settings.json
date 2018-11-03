@@ -2,6 +2,7 @@
     "files.exclude": {
         "src/**/*.js": true,
         "src/**/*.js.map": true,
+        "src/sicxe_cpu.ts": true,
         "tests/**/*.js": true,
         "tests/**/*.map": true
     }

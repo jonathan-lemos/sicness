@@ -15,7 +15,7 @@ export const sicMakeMask = (nBits: number): number => {
 
 export const sicCheckUnsigned = (val: number, nBits: number): void => {
 	if (val < 0x0 || val > sicMakeMask(nBits)) {
-		throw new Error("val does not fit in an " + nBits + "-bit range");
+		throw new Error(val.toString(16) + " does not fit in an unsigned " + nBits + "-bit range");
 	}
 };
 
@@ -168,92 +168,92 @@ export class SicBytecode {
 	}
 }
 
+export enum SicPendingType{
+	tag,
+	literal,
+}
+
+export class SicPending{
+	public type: SicPendingType;
+	public val: string;
+
+	constructor(type: SicPendingType, val: string){
+		this.type = type;
+		this.val = val;
+	}
+
+	public convert(tagTab: {[key: string]: number}, litTab: {[key: string]: number}): number | undefined{
+		if (this.type === SicPendingType.literal){
+			return litTab[this.val];
+		}
+		return tagTab[this.val];
+	}
+}
+
 export enum SicOpType {
-	register,
 	immediate,
 	direct,
 	indirect,
 }
-
 export class SicOperandF3 {
-	public val: number | string;
+	public val: number | SicPending;
 	public type: SicOpType;
 	public indexed: boolean;
 	public pcrel: boolean;
 	public baserel: boolean;
-	public format4: boolean;
 
-	constructor(arg: string, format4: boolean, basetag?: string) {
-		const reRegister = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$");
+	constructor(arg: string, baserel: boolean = false) {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
 		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
 		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
-		const operandLen = format4 ? 20 : 12;
-
-		this.format4 = format4;
+		const operandLen = 12;
 
 		const getType = (char: string): SicOpType => {
 			switch (char) {
 				case "#":
-				case "=":
 					return SicOpType.immediate;
 				case "@":
 					return SicOpType.indirect;
+				case "=":
 				default:
 					return SicOpType.direct;
 			}
 		};
 
+		const isLiteral = (st: string): boolean => {
+			return st.charAt(0) === "=";
+		};
+
+		this.baserel = baserel;
+
 		let match: RegExpMatchArray | null;
-		if ((match = arg.match(reRegister)) !== null) {
-			this.val = __sic_reg_to_dec(match[1]);
-			this.type = SicOpType.register;
-			this.indexed = false;
-			this.pcrel = false;
-			this.baserel = false;
-		}
-		else if ((match = arg.match(reDecimal)) !== null) {
+		if ((match = arg.match(reDecimal)) !== null) {
 			this.val = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
 			this.type = getType(match[1]);
 			this.indexed = match[3] != null;
 			this.pcrel = false;
-			this.baserel = false;
 		}
 		else if ((match = arg.match(reHex)) !== null) {
 			this.val = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
 			this.type = getType(match[1]);
 			this.indexed = match[3] != null;
 			this.pcrel = false;
-			this.baserel = false;
 		}
 		else if ((match = arg.match(reChar)) !== null) {
 			this.val = match[2].charCodeAt(0);
 			this.type = getType(match[1]);
 			this.indexed = match[3] != null;
 			this.pcrel = false;
-			this.baserel = false;
 		}
 		else if ((match = arg.match(reTag)) != null) {
-			this.val = match[2];
+			this.val = new SicPending(SicPendingType.tag, match[2]);
 			this.type = getType(match[1]);
 			this.indexed = match[3] != null;
-			if (basetag != null && this.val === basetag) {
-				this.baserel = true;
-				this.pcrel = false;
-			}
-			else {
-				this.baserel = false;
-				this.pcrel = true;
-			}
+			this.pcrel = !this.baserel;
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
-		}
-
-		if (this.format4) {
-			this.baserel = false;
-			this.pcrel = false;
 		}
 	}
 
@@ -265,11 +265,8 @@ export class SicOperandF3 {
 		if (typeof this.val === "number") {
 			return;
 		}
-		const len = this.format4 ? 20 : 12;
-		if (this.baserel) {
-			this.val = 0; // TODO
-		}
-		else if (this.pcrel) {
+		const len = 12;
+		if (this.pcrel) {
 			try {
 				this.val = sicMakeUnsigned(tagCallback(this.val) - loc, len);
 			}
@@ -290,7 +287,7 @@ export class SicOperandF3 {
 		const x = this.indexed;
 		const b = this.baserel;
 		const p = this.pcrel;
-		const e = this.format4;
+		const e = true;
 
 		switch (this.type) {
 			case SicOpType.direct:
@@ -329,6 +326,165 @@ export class SicOperandF3 {
 			bytes[1] |= 0x10;
 		}
 		return bytes;
+	}
+}
+
+export class SicOperandF4 {
+	public val: number | string;
+	public type: SicOpType;
+	public indexed: boolean;
+
+	constructor(arg: string) {
+		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
+		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
+		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
+		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
+		const operandLen = 20;
+
+		const getType = (char: string): SicOpType => {
+			switch (char) {
+				case "#":
+				case "=":
+					return SicOpType.immediate;
+				case "@":
+					return SicOpType.indirect;
+				default:
+					return SicOpType.direct;
+			}
+		};
+
+		let match: RegExpMatchArray | null;
+		if ((match = arg.match(reDecimal)) !== null) {
+			this.val = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
+			this.type = getType(match[1]);
+			this.indexed = match[3] != null;
+		}
+		else if ((match = arg.match(reHex)) !== null) {
+			this.val = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
+			this.type = getType(match[1]);
+			this.indexed = match[3] != null;
+		}
+		else if ((match = arg.match(reChar)) !== null) {
+			this.val = match[2].charCodeAt(0);
+			this.type = getType(match[1]);
+			this.indexed = match[3] != null;
+		}
+		else if ((match = arg.match(reTag)) != null) {
+			this.val = match[2];
+			this.type = getType(match[1]);
+			this.indexed = match[3] != null;
+		}
+		else {
+			throw new Error("Operand " + arg + " is not of any valid format.");
+		}
+	}
+
+	public ready(): boolean {
+		return typeof this.val === "number";
+	}
+
+	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
+		if (typeof this.val === "number") {
+			return;
+		}
+		this.val = sicMakeUnsigned(tagCallback(this.val), 20);
+	}
+
+	public nixbpe(): number[] {
+		let n: boolean;
+		let i: boolean;
+		const x = this.indexed;
+		const b = false;
+		const p = false;
+		const e = true;
+
+		switch (this.type) {
+			case SicOpType.direct:
+				n = true;
+				i = true;
+				break;
+			case SicOpType.indirect:
+				n = true;
+				i = false;
+				break;
+			case SicOpType.immediate:
+				n = false;
+				i = true;
+				break;
+			default:
+				throw new Error("Registers do not have an nixbpe value");
+		}
+
+		const bytes = [0x0, 0x0];
+		if (n) {
+			bytes[0] |= 0x2;
+		}
+		if (i) {
+			bytes[0] |= 0x1;
+		}
+		if (x) {
+			bytes[1] |= 0x80;
+		}
+		if (b) {
+			bytes[1] |= 0x40;
+		}
+		if (p) {
+			bytes[1] |= 0x20;
+		}
+		if (e) {
+			bytes[1] |= 0x10;
+		}
+		return bytes;
+	}
+}
+
+export class SicOperandLegacy {
+	public val: number | string;
+	public indexed: boolean;
+
+	constructor(arg: string, format4: boolean, baserel: boolean = false) {
+		const reRegister = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$");
+		const reDecimal = new RegExp("^(\\d+)(,X)?$");
+		const reHex = new RegExp("^X'([0-9A-F]+)'(,X)?$");
+		const reChar = new RegExp("^C'(.)'(,X)?$");
+		const reTag = new RegExp("^([A-Z0-9]+)(,X)?$");
+		const operandLen = 15;
+
+		let match: RegExpMatchArray | null;
+		if ((match = arg.match(reRegister)) !== null) {
+			this.val = sicRegToDec(match[1]);
+			this.indexed = false;
+		}
+		else if ((match = arg.match(reDecimal)) !== null) {
+			this.val = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
+			this.indexed = match[3] != null;
+		}
+		else if ((match = arg.match(reHex)) !== null) {
+			this.val = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
+			this.indexed = match[3] != null;
+		}
+		else if ((match = arg.match(reChar)) !== null) {
+			this.val = match[2].charCodeAt(0);
+			this.indexed = match[3] != null;
+		}
+		else if ((match = arg.match(reTag)) != null) {
+			this.val = match[2];
+			this.indexed = match[3] != null;
+		}
+		else {
+			throw new Error("Operand " + arg + " is not of any valid format.");
+		}
+	}
+
+	public ready(): boolean {
+		return typeof this.val === "number";
+	}
+
+	public convertTag(tagCallback: (tag: string) => number): void {
+		if (typeof this.val === "number") {
+			return;
+		}
+		this.val = sicMakeUnsigned(tagCallback(this.val), 15);
 	}
 }
 
@@ -398,7 +554,7 @@ export class SicFormat2 {
 			let match: RegExpMatchArray | null;
 
 			if ((match = str.match(reRegister)) !== null) {
-				return __sic_reg_to_dec(match[1]);
+				return sicRegToDec(match[1]);
 			}
 			else if ((match = str.match(reHex)) !== null) {
 				return parseInt(match[1], 16);
@@ -433,166 +589,252 @@ export class SicFormat2 {
 }
 
 export class SicFormat3 {
+	public static isFormat3(mnemonic: string): boolean {
+		const bc = bytecodeTable[mnemonic];
+		return bc !== undefined && bc.format === 3;
+	}
+
 	public bc: SicBytecode;
 	public op: SicOperandF3;
 
-	constructor(line: SicSplit, basetag?: string | undefined) {
+	constructor(line: SicSplit, baserel: boolean = false) {
 		if (!SicFormat3.isFormat3(line.op)) {
-			throw line.op + " is not format 3";
+			throw new Error(line.op + " is not format 3");
 		}
 
 		this.bc = new SicBytecode(line.op);
-		this.op = new SicOperandF3(line.args, false, basetag);
+		this.op = new SicOperandF3(line.args, baserel);
 	}
 
-	static isFormat3(mnemonic: string): boolean {
-		let re = new RegExp("^(ADD|ADDF|AND|COMP|COMPF|DIV|DIVF|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|OR|RD|RSUB|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|TD|TIX|WD)$");
-		return re.test(mnemonic);
+	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
+		this.op.convertTag(loc, tagCallback);
 	}
 
-	convertTag(loc: number, tag_callback: (tag: string) => number): void {
-		this.op.convertTag(loc, tag_callback);
-	}
-
-	ready(): boolean {
+	public ready(): boolean {
 		return this.op.ready();
 	}
 
-	length(): number {
+	public length(): number {
 		return 3;
 	}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		if (!this.ready()) {
 			throw new Error("MY BODY IS NOT READY");
 		}
-		let bytes = this.op.nixbpe();
+		const bytes = this.op.nixbpe();
 		bytes[0] |= (this.bc.opcode & 0xFC);
-		bytes[1] |= (<number>this.op.val & 0x0F00) >>> 8;
-		bytes[2] = (<number>this.op.val & 0xFF);
+		bytes[1] |= ((this.op.val as number) & 0x0F00) >>> 8;
+		bytes[2] = ((this.op.val as number) & 0xFF);
 		return bytes;
 	}
 }
 
-export class sic_format4 {
-	bc: SicBytecode;
-	op: SicOperandF3;
+export class SicFormatLegacy {
+	public static isFormatLegacy(mnemonic: string): boolean {
+		if (mnemonic.charAt(0) !== "*") {
+			return false;
+		}
+		const bc = bytecodeTable[mnemonic.slice(1)];
+		return bc !== undefined && bc.format === 3;
+	}
+
+	public bc: SicBytecode;
+	public op: SicOperandF3;
 
 	constructor(line: SicSplit) {
-		if (!sic_format4.isFormat4(line.op)) {
-			throw line.op + " is not format 4";
+		if (!SicFormatLegacy.isFormatLegacy(line.op)) {
+			throw new Error(line.op + " is not SIC legacy format");
+		}
+
+		this.bc = new SicBytecode(line.op);
+		this.op = new SicOperandF3(line.args, false);
+
+		if (this.op.type !== SicOpType.direct) {
+			throw new Error("SIC legacy operands cannot use indirect or immediate addressing.");
+		}
+		this.op.pcrel = false;
+	}
+
+	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
+		this.op.convertTag(loc, tagCallback);
+	}
+
+	public ready(): boolean {
+		return this.op.ready();
+	}
+
+	public length(): number {
+		return 3;
+	}
+
+	public toBytes(): number[] {
+		if (!this.ready()) {
+			throw new Error("MY BODY IS NOT READY");
+		}
+		const bytes = this.op.nixbpe();
+		bytes[0] |= (this.bc.opcode & 0xFC);
+		bytes[1] |= ((this.op.val as number) & 0x0F00) >>> 8;
+		bytes[2] = ((this.op.val as number) & 0xFF);
+		return bytes;
+	}
+}
+
+export class SicFormat4 {
+	public static isFormat4(mnemonic: string): boolean {
+		if (mnemonic.charAt(0) !== "+") {
+			return false;
+		}
+		const bc = bytecodeTable[mnemonic.slice(1)];
+		return bc !== undefined && bc.format === 3;
+	}
+
+	public bc: SicBytecode;
+	public op: SicOperandF3;
+
+	constructor(line: SicSplit) {
+		if (!SicFormat4.isFormat4(line.op)) {
+			throw new Error(line.op + " is not format 4");
 		}
 
 		this.bc = new SicBytecode(line.op);
 		this.op = new SicOperandF3(line.args, true);
 	}
 
-	static isFormat4(mnemonic: string): boolean {
-		let re = new RegExp("^\\+(ADD|ADDF|AND|COMP|COMPF|DIV|DIVF|J|JEQ|JGT|JLT|JSUB|LDA|LDB|LDCH|LDF|LDL|LDS|LDT|LDX|LPS|MUL|MULF|OR|RD|RSUB|SSK|STA|STB|STCH|STF|STI|STL|STS|STSW|STT|STX|SUB|SUBF|TD|TIX|WD)$");
-		return re.test(mnemonic);
+	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
+		this.op.convertTag(loc, tagCallback);
 	}
 
-	convertTag(loc: number, tag_callback: (tag: string) => number): void {
-		this.op.convertTag(loc, tag_callback);
-	}
-
-	ready(): boolean {
+	public ready(): boolean {
 		return this.op.ready();
 	}
 
-	length(): number {
+	public length(): number {
 		return 4;
 	}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		if (!this.ready()) {
 			throw new Error("MY BODY IS NOT READY");
 		}
-		let bytes = this.op.nixbpe();
+		const bytes = this.op.nixbpe();
 		bytes[0] |= (this.bc.opcode & 0xFC);
-		bytes[1] |= (<number>this.op.val & 0x0F0000) >>> 16;
-		bytes[2] = (<number>this.op.val & 0xFF00) >>> 8;
-		bytes[3] = (<number>this.op.val & 0xFF);
+		bytes[1] |= ((this.op.val as number) & 0x0F0000) >>> 16;
+		bytes[2] = ((this.op.val as number) & 0xFF00) >>> 8;
+		bytes[3] = ((this.op.val as number) & 0xFF);
 		return bytes;
 	}
 }
 
-export class sic_space {
-	mnemonic: string;
-	arg: number;
-
-	constructor(line: SicSplit) {
-		if (!sic_space.isSpace(line.op)) {
-			throw new Error("This mnemonic is not a space.")
-		}
-		this.mnemonic = line.op;
-		let re_dec = new RegExp("^(\\d+)$");
-		let re_hex = new RegExp("^X'([0-9A-Fa-f]+)'$");
-		let match: RegExpMatchArray | null;
-
-		if ((match = line.args.match(re_dec)) != null) {
-			this.arg = parseInt(match[1]);
-		}
-		else if ((match = line.args.match(re_hex)) != null) {
-			this.arg = parseInt(match[1], 16);
-		}
-		else {
-			throw line.args + " is not a valid operand format.";
-		}
-	}
-
-	static isSpace(mnemonic: string): boolean {
-		let re = new RegExp("^(RESW|RESB|WORD|BYTE)$");
+export class SicSpace {
+	public static isSpace(mnemonic: string): boolean {
+		const re = new RegExp("^(RESW|RESB|WORD|BYTE)$");
 		return re.test(mnemonic);
 	}
 
-	ready(): boolean {
-		return true;
+	private static splitWord(n: number): number[] {
+		sicCheckUnsigned(n, 24);
+		return [(n & 0xFF0000) >>> 16, (n & 0xFF00) >>> 8, (n & 0xFF)];
 	}
 
-	length(): number {
-		switch (this.mnemonic) {
-			case "RESW":
-				return 3 * <number>this.arg;
-			case "RESB":
-				return <number>this.arg;
-			case "WORD":
-				return 3;
-			case "BYTE":
-				return 1;
-			default:
-				throw this.mnemonic + " is invalid. this is a ultra mega bug";
+	private static makeWord(arr: number[]): number {
+		if (arr.length > 3) {
+			throw new Error("Words can have a max of 3 bytes");
+		}
+		let ret = 0;
+		for (let i = arr.length - 1, j = 0; i >= 0; --i, j += 8) {
+			ret += arr[i] << j;
+		}
+		return ret;
+	}
+
+	public mnemonic: string;
+	public arg: number[];
+
+	constructor(line: SicSplit) {
+		if (!SicSpace.isSpace(line.op)) {
+			throw new Error("This mnemonic is not a space.");
+		}
+		this.mnemonic = line.op;
+		const reDec = new RegExp("^(\\d+)$");
+		const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
+		const reChar = new RegExp("^C'(.+)'$");
+		let match: RegExpMatchArray | null;
+
+		if ((match = line.args.match(reDec)) !== null) {
+			this.arg = SicSpace.splitWord(parseInt(match[1], 10));
+		}
+		else if ((match = line.args.match(reHex)) !== null) {
+			this.arg = SicSpace.splitWord(parseInt(match[1], 16));
+		}
+		else if ((match = line.args.match(reChar)) !== null) {
+			this.arg = [];
+			for (let i = 0; i < match[1].length; ++i) {
+				this.arg.push(match[1].charCodeAt(i));
+			}
+			switch (this.mnemonic) {
+				case "RESW":
+				case "RESB":
+					if (this.arg.length > 3) {
+						throw new Error("RESW/RESB cannot be used with a string argument");
+					}
+			}
+		}
+		else {
+			throw new Error(line.args + " is not a valid operand format.");
 		}
 	}
 
-	toBytes(): number[] {
-		let a = [];
+	public ready(): boolean {
+		return true;
+	}
+
+	public length(): number {
 		switch (this.mnemonic) {
 			case "RESW":
-				for (let i = 0; i < 3 * this.arg; ++i) {
+				return 3 * SicSpace.makeWord(this.arg);
+			case "RESB":
+				return SicSpace.makeWord(this.arg);
+			case "WORD":
+				return this.arg.length + this.arg.length % 3 ? 1 : 0;
+			case "BYTE":
+				return this.arg.length;
+			default:
+				throw new Error(this.mnemonic + " is invalid. this is a ultra mega bug");
+		}
+	}
+
+	public toBytes(): number[] {
+		const a: number[] = [];
+		switch (this.mnemonic) {
+			case "RESW":
+				for (let i = 0; i < 3 * SicSpace.makeWord(this.arg); ++i) {
 					a.push(0xFF);
 				}
 				return a;
 			case "RESB":
-				for (let i = 0; i < this.arg; ++i) {
+				for (let i = 0; i < SicSpace.makeWord(this.arg); ++i) {
 					a.push(0xFF);
 				}
 				return a;
 			case "WORD":
-				return [(this.arg & 0xFF0000) >>> 16, (this.arg & 0xFF00) >>> 8, this.arg & 0xFF];
+				for (let i = 0; i < this.arg.length % 3; ++i) {
+					a.push(0x00);
+				}
+				this.arg.forEach(val => a.push(val));
 			case "BYTE":
-				return [this.arg & 0xFF];
+				return this.arg;
 			default:
 				throw new Error("Mnemonic is invalid.");
 		}
 	}
 }
 
-export class sic_instr_line {
-	instr: ISicInstruction;
-	loc: number;
-	tag: string;
-	str: string;
+export class SicCodeLine {
+	public instr: ISicInstruction;
+	public loc: number;
+	public tag: string;
+	public str: string;
 	constructor(instr: ISicInstruction, loc: number, tag: string, str: string) {
 		this.instr = instr;
 		this.loc = loc;
@@ -601,27 +843,10 @@ export class sic_instr_line {
 	}
 }
 
-export class sic_tags {
-	tag_dict: IDictionary;
-
-	constructor(lines: sic_instr_line[]) {
-		this.tag_dict = {};
-		for (let i = 0; i < lines.length; ++i) {
-			if (lines[i].tag !== "") {
-				this.tag_dict[lines[i].tag] = i;
-			}
-		}
-	}
-
-	getTagLoc(lines: sic_instr_line[], tag: string): number {
-		return lines[this.tag_dict[tag]].loc;
-	}
-}
-
-export class sic_lst {
-	loc: string;
-	bytecode: string;
-	instr: string;
+export class SicLstEntry {
+	public loc: string;
+	public bytecode: string;
+	public instr: string;
 
 	constructor(loc: string, bytecode: string, instr: string) {
 		this.loc = loc;
@@ -636,18 +861,25 @@ export class sic_lst {
 	}
 }
 
-export class sic_pass1 {
-	tags: sic_tags;
-	lines: sic_instr_line[];
-	lst: sic_lst[];
-
-	static isDirective(mnemonic: string) {
-		let re = new RegExp("^(START|END|BASE|NOBASE|LTORG)$");
+export class SicCompiler {
+	private static isDirective(mnemonic: string) {
+		const re = new RegExp("^(START|END|BASE|NOBASE|LTORG)$");
 		return re.test(mnemonic);
 	}
 
+	private tagTab: { [key: string]: number };
+	private litTab: { [key: string]: number };
+	private equTab: { [key: string]: number };
+	private useTab: { [key: string]: number };
+
+	public lines: SicCodeLine[];
+	public lst: SicLstEntry[];
+
 	constructor(lines: string[]) {
-		let splits = lines.map(str => str.replace(/\..+$/, "")).filter(str => str.trim() !== "").map(val => new SicSplit(val));
+		const splits = lines
+			.map(str => str.replace(/\..+$/, ""))
+			.filter(str => str.trim() !== "")
+			.map(val => new SicSplit(val));
 
 		this.lines = [];
 		this.lst = [];
@@ -657,8 +889,8 @@ export class sic_pass1 {
 		let locCurrent = 0;
 
 		for (let i = 0; i < splits.length; ++i) {
-			let instr: sic_instr_line;
-			if (sic_pass1.isDirective(splits[i].op)) {
+			let instr: SicCodeLine;
+			if (SicCompiler.isDirective(splits[i].op)) {
 				switch (splits[i].op) {
 					case "START":
 						if (i !== 0) {
@@ -691,19 +923,19 @@ export class sic_pass1 {
 				continue;
 			}
 			else if (SicFormat1.isFormat1(splits[i].op)) {
-				instr = new sic_instr_line(new SicFormat1(splits[i]), locCurrent, splits[i].tag, splits[i].str);
+				instr = new SicCodeLine(new SicFormat1(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else if (SicFormat2.isFormat2(splits[i].op)) {
-				instr = new sic_instr_line(new SicFormat2(splits[i]), locCurrent, splits[i].tag, splits[i].str);
+				instr = new SicCodeLine(new SicFormat2(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else if (SicFormat3.isFormat3(splits[i].op)) {
-				instr = new sic_instr_line(new SicFormat3(splits[i], baseTag), locCurrent, splits[i].tag, splits[i].str);
+				instr = new SicCodeLine(new SicFormat3(splits[i], baseTag !== undefined), locCurrent, splits[i].tag, splits[i].str);
 			}
-			else if (sic_format4.isFormat4(splits[i].op)) {
-				instr = new sic_instr_line(new sic_format4(splits[i]), locCurrent, splits[i].tag, splits[i].str);
+			else if (SicFormat4.isFormat4(splits[i].op)) {
+				instr = new SicCodeLine(new SicFormat4(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
-			else if (sic_space.isSpace(splits[i].op)) {
-				instr = new sic_instr_line(new sic_space(splits[i]), locCurrent, splits[i].tag, splits[i].str);
+			else if (SicSpace.isSpace(splits[i].op)) {
+				instr = new SicCodeLine(new SicSpace(splits[i]), locCurrent, splits[i].tag, splits[i].str);
 			}
 			else {
 				throw new Error(splits[i].op + " is not of any recognized format.");
@@ -711,35 +943,35 @@ export class sic_pass1 {
 
 			locCurrent += instr.instr.length();
 			this.lines.push(instr);
-		};
-
-		this.tags = new sic_tags(this.lines);
-
-		let tag_callback = (tag: string): number => {
-			return this.tags.getTagLoc(this.lines, tag);
 		}
+
+		this.tags = new SicTags(this.lines);
+
+		const tagCallback = (tag: string): number => {
+			return this.tags.getTagLoc(this.lines, tag);
+		};
 
 		this.lines.forEach(val => {
 			if (val.instr.ready()) {
 				return;
 			}
 			else if (val.instr instanceof SicFormat3) {
-				(<SicFormat3>val.instr).convertTag(val.loc, tag_callback);
+				(val.instr as SicFormat3).convertTag(val.loc, tagCallback);
 			}
-			else if (val.instr instanceof sic_format4) {
-				(<sic_format4>val.instr).convertTag(val.loc, tag_callback);
+			else if (val.instr instanceof SicFormat4) {
+				(val.instr as SicFormat4).convertTag(val.loc, tagCallback);
 			}
 			else {
-				throw new Error("all bodies were not ready. this is a bug")
+				throw new Error("all bodies were not ready. this is a bug");
 			}
 		});
 
 		for (let i = 0, j = 0; i < splits.length; ++i) {
-			if (sic_pass1.isDirective(splits[i].op)) {
-				this.lst.push(new sic_lst("", "", splits[i].str.trim()));
+			if (SicCompiler.isDirective(splits[i].op)) {
+				this.lst.push(new SicLstEntry("", "", splits[i].str.trim()));
 			}
 			else {
-				let l = this.lines[j];
+				const l = this.lines[j];
 				let bc = "";
 				l.instr.toBytes().forEach(val => {
 					let c = val.toString(16).toUpperCase();
@@ -748,22 +980,22 @@ export class sic_pass1 {
 					}
 					bc += c;
 				});
-				this.lst.push(new sic_lst(l.loc.toString(16).toUpperCase(), bc, l.str.trim()));
+				this.lst.push(new SicLstEntry(l.loc.toString(16).toUpperCase(), bc, l.str.trim()));
 				j++;
 			}
 		}
 	}
 
-	toLst(): sic_lst[] {
+	public toLst(): SicLstEntry[] {
 		return this.lst;
 	}
 
-	toBytes(): number[][] {
+	public toBytes(): number[][] {
 		return this.lines.map(val => val.instr.toBytes());
 	}
 }
 
-export const __sic_reg_to_dec = (reg: string): number => {
+export const sicRegToDec = (reg: string): number => {
 	switch (reg) {
 		case "A":
 			return 0;
@@ -786,9 +1018,9 @@ export const __sic_reg_to_dec = (reg: string): number => {
 		default:
 			throw new Error("reg type " + reg + " is not valid");
 	}
-}
+};
 
-export const __sic_dec_to_reg = (reg: number): string => {
+export const sicDecToReg = (reg: number): string => {
 	switch (reg) {
 		case 0:
 			return "A";
@@ -811,4 +1043,4 @@ export const __sic_dec_to_reg = (reg: number): string => {
 		default:
 			throw new Error("reg no " + reg + " is not valid");
 	}
-}
+};

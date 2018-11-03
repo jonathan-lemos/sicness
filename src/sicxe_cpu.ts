@@ -1,224 +1,113 @@
 /*
  * Copyright (c) 2018 Jonathan Lemos
- * 
+ *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
 */
 
-export class sic_opcode{
-	mnemonic: string;
-	format: number;
+import {sicCheckUnsigned, sicDecToReg, sicMakeUnsigned, sicRegToDec} from "./sicxe_cc";
 
-	constructor(m_byte: number) {
-		switch (m_byte) {
-		case 0x18:
-			this.mnemonic = "ADD";
-			this.format = 3;
-		case 0x58:
-			this.mnemonic = "ADDF";
-			this.format = 3;
-		case 0x90:
-			this.mnemonic = "ADDR";
-			this.format = 2;
-		case 0x40:
-			this.mnemonic = "AND";
-			this.format = 3;
-		case 0xB4:
-			this.mnemonic = "CLEAR";
-			this.format = 2;
-		case 0x28:
-			this.mnemonic = "COMP";
-			this.format = 3;
-		case 0x88:
-			this.mnemonic = "COMPF";
-			this.format = 3;
-		case 0xA0:
-			this.mnemonic = "COMPR";
-			this.format = 2;
-		case 0x24:
-			this.mnemonic = "DIV";
-			this.format = 3;
-		case 0x64:
-			this.mnemonic = "DIVF";
-			this.format = 3;
-		case 0x9C:
-			this.mnemonic = "DIVR";
-			this.format = 2;
-		case 0xC4:
-			this.mnemonic = "FIX";
-			this.format = 1;
-		case 0xC0:
-			this.mnemonic = "FLOAT";
-			this.format = 1;
-		case 0xF4:
-			this.mnemonic = "HIO";
-			this.format = 1;
-		case 0x3C:
-			this.mnemonic = "J";
-			this.format = 3;
-		case 0x30:
-			this.mnemonic = "JEQ";
-			this.format = 3;
-		case 0x38:
-			this.mnemonic = "JLT";
-			this.format = 3;
-		case 0x48:
-			this.mnemonic = "JSUB";
-			this.format = 3;
-		case 0x00:
-			this.mnemonic = "LDA";
-			this.format = 3;
-		case 0x68:
-			this.mnemonic = "LDB";
-			this.format = 3;
-		case 0x50:
-			this.mnemonic = "LDCH";
-			this.format = 3;
-		case 0x70:
-			this.mnemonic = "LDF";
-			this.format = 3;
-		case 0x08:
-			this.mnemonic = "LDL";
-			this.format = 3;
-		case 0x6C:
-			this.mnemonic = "LDS";
-			this.format = 3;
-		case 0x74:
-			this.mnemonic = "LDT";
-			this.format = 3;
-		case 0x04:
-			this.mnemonic = "LDX";
-			this.format = 3;
-		case 0xD0:
-			this.mnemonic = "LPS";
-			this.format = 3;
-		case 0x20:
-			this.mnemonic = "MUL";
-			this.format = 3;
-		case 0x60:
-			this.mnemonic = "MULF";
-			this.format = 3;
-		case 0x98:
-			this.mnemonic = "MULR";
-			this.format = 2;
-		case 0xC8:
-			this.mnemonic = "NORM";
-			this.format = 1;
-		case 0x44:
-			this.mnemonic = "OR";
-			this.format = 3;
-		case 0xD8:
-			this.mnemonic = "RD";
-			this.format = 3;
-		case 0xAC:
-			this.mnemonic = "RMO";
-			this.format = 2;
-		case 0x4C:
-			this.mnemonic = "RSUB";
-			this.format = 3;
-		case 0xA4:
-			this.mnemonic = "SHIFTL";
-			this.format = 2;
-		case 0xA8:
-			this.mnemonic = "SHIFTR";
-			this.format = 2;
-		case 0xF0:
-			this.mnemonic = "SIO";
-			this.format = 1;
-		case 0xEC:
-			this.mnemonic = "SSK";
-			this.format = 3;
-		case 0x0C:
-			this.mnemonic = "STA";
-			this.format = 3;
-		case 0x78:
-			this.mnemonic = "STB";
-			this.format = 3;
-		case 0x54:
-			this.mnemonic = "STCH";
-			this.format = 3;
-		case 0x80:
-			this.mnemonic = "STF";
-			this.format = 3;
-		case 0xD4:
-			this.mnemonic = "STI";
-			this.format = 3;
-		case 0x14:
-			this.mnemonic = "STL";
-			this.format = 3;
-		case 0x7C:
-			this.mnemonic = "STS";
-			this.format = 3;
-		case 0xE8:
-			this.mnemonic = "STSW";
-			this.format = 3;
-		case 0x84:
-			this.mnemonic = "STT";
-			this.format = 3;
-		case 0x10:
-			this.mnemonic = "STX";
-			this.format = 3;
-		case 0x1C:
-			this.mnemonic = "SUB";
-			this.format = 3;
-		case 0x5C:
-			this.mnemonic = "SUBF";
-			this.format = 3;
-		case 0x94:
-			this.mnemonic = "SUBR";
-			this.format = 2;
-		case 0xB0:
-			this.mnemonic = "SVC";
-			this.format = 2;
-		case 0xE0:
-			this.mnemonic = "TD";
-			this.format = 3;
-		case 0xF8:
-			this.mnemonic = "TIO";
-			this.format = 1;
-		case 0x2C:
-			this.mnemonic = "TIX";
-			this.format = 3;
-		case 0xB8:
-			this.mnemonic = "TIXR";
-			this.format = 2;
-		case 0xDC:
-			this.mnemonic = "WD";
-			this.format = 3;
-		default:
-			throw "unknown opcode";
-		}
+export class OpcodeArrEntry{
+	public mnemonic: string;
+	public opcode: number;
+	public format: number;
+
+	constructor(mnemonic: string, opcode: number, format: number){
+		this.mnemonic = mnemonic;
+		this.opcode = opcode;
+		this.format = format;
 	}
 }
 
-export class sic_rdfile {
-	contents: number[];
-	reading: boolean;
-	writing: boolean;
+export const opcodeArr: OpcodeArrEntry[] = [];
+opcodeArr[0x18] = new OpcodeArrEntry("ADD", 0x18, 3);
+opcodeArr[0x58] = new OpcodeArrEntry("ADDF", 0x58, 3);
+opcodeArr[0x90] = new OpcodeArrEntry("ADDR", 0x90, 2);
+opcodeArr[0x40] = new OpcodeArrEntry("AND", 0x40, 3);
+opcodeArr[0xB4] = new OpcodeArrEntry("CLEAR", 0xB4, 2);
+opcodeArr[0x28] = new OpcodeArrEntry("COMP", 0x28, 3);
+opcodeArr[0x88] = new OpcodeArrEntry("COMPF", 0x88, 3);
+opcodeArr[0xA0] = new OpcodeArrEntry("COMPR", 0xA0, 2);
+opcodeArr[0x24] = new OpcodeArrEntry("DIV", 0x24, 3);
+opcodeArr[0x64] = new OpcodeArrEntry("DIVF", 0x64, 3);
+opcodeArr[0x9C] = new OpcodeArrEntry("DIVR", 0x9C, 2);
+opcodeArr[0xC4] = new OpcodeArrEntry("FIX", 0xC4, 1);
+opcodeArr[0xC0] = new OpcodeArrEntry("FLOAT", 0xC0, 1);
+opcodeArr[0xF4] = new OpcodeArrEntry("HIO", 0xF4, 1);
+opcodeArr[0x3C] = new OpcodeArrEntry("J", 0x3C, 3);
+opcodeArr[0x30] = new OpcodeArrEntry("JEQ", 0x30, 3);
+opcodeArr[0x38] = new OpcodeArrEntry("JLT", 0x38, 3);
+opcodeArr[0x48] = new OpcodeArrEntry("JSUB", 0x48, 3);
+opcodeArr[0x00] = new OpcodeArrEntry("LDA", 0x00, 3);
+opcodeArr[0x68] = new OpcodeArrEntry("LDB", 0x68, 3);
+opcodeArr[0x50] = new OpcodeArrEntry("LDCH", 0x50, 3);
+opcodeArr[0x70] = new OpcodeArrEntry("LDF", 0x70, 3);
+opcodeArr[0x08] = new OpcodeArrEntry("LDL", 0x08, 3);
+opcodeArr[0x6C] = new OpcodeArrEntry("LDS", 0x6C, 3);
+opcodeArr[0x74] = new OpcodeArrEntry("LDT", 0x74, 3);
+opcodeArr[0x04] = new OpcodeArrEntry("LDX", 0x04, 3);
+opcodeArr[0xD0] = new OpcodeArrEntry("LPS", 0xD0, 3);
+opcodeArr[0x20] = new OpcodeArrEntry("MUL", 0x20, 3);
+opcodeArr[0x60] = new OpcodeArrEntry("MULF", 0x60, 3);
+opcodeArr[0x98] = new OpcodeArrEntry("MULR", 0x98, 2);
+opcodeArr[0xC8] = new OpcodeArrEntry("NORM", 0xC8, 1);
+opcodeArr[0x44] = new OpcodeArrEntry("OR", 0x44, 3);
+opcodeArr[0xD8] = new OpcodeArrEntry("RD", 0xD8, 3);
+opcodeArr[0xAC] = new OpcodeArrEntry("RMO", 0xAC, 2);
+opcodeArr[0x4C] = new OpcodeArrEntry("RSUB", 0x4C, 3);
+opcodeArr[0xA4] = new OpcodeArrEntry("SHIFTL", 0xA4, 2);
+opcodeArr[0xA8] = new OpcodeArrEntry("SHIFTR", 0xA8, 2);
+opcodeArr[0xF0] = new OpcodeArrEntry("SIO", 0xF0, 1);
+opcodeArr[0xEC] = new OpcodeArrEntry("SSK", 0xEC, 3);
+opcodeArr[0x0C] = new OpcodeArrEntry("STA", 0x0C, 3);
+opcodeArr[0x78] = new OpcodeArrEntry("STB", 0x78, 3);
+opcodeArr[0x54] = new OpcodeArrEntry("STCH", 0x54, 3);
+opcodeArr[0x80] = new OpcodeArrEntry("STF", 0x80, 3);
+opcodeArr[0xD4] = new OpcodeArrEntry("STI", 0xD4, 3);
+opcodeArr[0x14] = new OpcodeArrEntry("STL", 0x14, 3);
+opcodeArr[0x7C] = new OpcodeArrEntry("STS", 0x7C, 3);
+opcodeArr[0xE8] = new OpcodeArrEntry("STSW", 0xE8, 3);
+opcodeArr[0x84] = new OpcodeArrEntry("STT", 0x84, 3);
+opcodeArr[0x10] = new OpcodeArrEntry("STX", 0x10, 3);
+opcodeArr[0x1C] = new OpcodeArrEntry("SUB", 0x1C, 3);
+opcodeArr[0x5C] = new OpcodeArrEntry("SUBF", 0x5C, 3);
+opcodeArr[0x94] = new OpcodeArrEntry("SUBR", 0x94, 2);
+opcodeArr[0xB0] = new OpcodeArrEntry("SVC", 0xB0, 2);
+opcodeArr[0xE0] = new OpcodeArrEntry("TD", 0xE0, 3);
+opcodeArr[0xF8] = new OpcodeArrEntry("TIO", 0xF8, 1);
+opcodeArr[0x2C] = new OpcodeArrEntry("TIX", 0x2C, 3);
+opcodeArr[0xB8] = new OpcodeArrEntry("TIXR", 0xB8, 2);
+opcodeArr[0xDC] = new OpcodeArrEntry("WD", 0xDC, 3);
+
+export class SicRdFile {
+	public contents: number[];
+	public reading: boolean;
+	public writing: boolean;
 	constructor(contents: number[]) {
 		this.contents = contents.map(val => {
-			if (val < 0x00 || val > 0xFF) {
-				throw "val must be in range [0x00-0xFF]";
-			}
+			sicCheckUnsigned(val, 8);
 			return val;
 		});
 		this.reading = true;
 		this.writing = false;
 	}
 
-	get(): number {
-		return this.contents.shift();
+	public get(): number {
+		if (this.contents.length === 0){
+			return 0x04; // EOF
+		}
+		return this.contents.shift() as number;
 	}
 
-	eof(): boolean {
-		return this.contents === undefined || this.contents.length == 0;
+	public eof(): boolean {
+		return this.contents === undefined || this.contents.length === 0;
 	}
 }
 
-export class sic_wrfile {
-	contents: number[];
-	reading: boolean;
-	writing: boolean;
+export class SicWrFile {
+	public contents: number[];
+	public reading: boolean;
+	public writing: boolean;
 
 	constructor() {
 		this.contents = [];
@@ -226,82 +115,176 @@ export class sic_wrfile {
 		this.writing = true;
 	}
 
-	push(val: number): void {
-		if (val < 0x00 || val > 0xFF) {
-			throw "number must be in range [0x00-0xFF]";
-		}
+	public push(val: number): void {
+		sicCheckUnsigned(val, 8);
 		this.contents.push(val);
 	}
 }
 
-export interface sic_file {
+export interface ISicFile {
 	reading: boolean;
 	writing: boolean;
 }
 
-export class sic_cpu {
-	max_addr: number;
-	xe: boolean;
-	registers: number[];
-	memory: number[];
-	devices: sic_file[];
-	opcodes: ((...args: any[]) => void)[];
+export class SicHexRegister{
+	private val: number;
 
-	constructor(max_addr: number, xe: boolean) {
-		if (max_addr <= 0x0) {
-			throw "max_addr has to be at least 0x1"
-		}
-		if (max_addr > 0xFFFFF) {
-			throw "sic/xe machines can only address up to 0xFFFFF";
-		}
-		this.max_addr = max_addr;
-		this.xe = xe;
-		this.registers["A"] = 0xFFFFFF; // accumulator
-		this.registers["X"] = 0xFFFFFF; // index (relative address)
-		this.registers["L"] = 0xFFFFFF; // linkage (return)
-		this.registers["B"] = 0xFFFFFF; // base (xe only)
-		this.registers["S"] = 0xFFFFFF; // general (xe only)
-		this.registers["T"] = 0xFFFFFF; // general (xe only)
-		this.registers["F"] = 0xFFFFFF; // floating point (xe only)
-		this.registers["PC"] = 0x000000; // program-counter (instruction)
-		this.registers["SW"] = '0'; // status-word (flag)
-		for (let i = 0; i <= max_addr; ++i) {
-			this.memory[i] = 0xFF;
-		}
-		this.devices = [];
+	constructor(defaultVal: number = 0xFFFFFF){
+		this.val = defaultVal;
+	}
 
-		this.opcodes["ADD"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+	public add(n: number){
+		sicCheckUnsigned(n, 24);
+		this.val += n;
+		this.correctFlow();
+	}
 
-			this.registers["A"] += this.__sic_deref24(mem_loc);
+	public sub(n: number){
+		sicCheckUnsigned(n, 24);
+		this.val -= n;
+		this.correctFlow();
+	}
+
+	public mul(n: number){
+		sicCheckUnsigned(n, 24);
+		this.val *= n;
+		this.correctFlow();
+	}
+
+	public div(n: number): void{
+		sicCheckUnsigned(n, 24);
+		this.val /= n;
+	}
+
+	public get(): number{
+		return this.val;
+	}
+
+	public float(n: number): number{
+		return 0; // TODO
+	}
+
+	private correctFlow(): void {
+		while (this.val < 0x0) {
+			this.val += 0xFFFFFF;
+		}
+		this.val %= 0xFFFFFF;
+	}
+}
+
+export class SicFloatRegister{
+	private static hexToFloat(n: number): number{
+		return 0; // TODO
+	}
+
+	private static floatToHex(n: number): number{
+		return 0; // TODO
+	}
+
+	private val: number;
+
+	constructor(defaultVal: number = 0) {
+		this.val = defaultVal;
+	}
+
+	public add(n: number): void{
+		this.val += n;
+	}
+
+	public sub(n: number): void{
+		this.val -= n;
+	}
+
+	public mul(n: number): void{
+		this.val *= n;
+	}
+
+	public div(n: number): void{
+		this.val /= n;
+	}
+
+	public getHex(): number{
+		return SicFloatRegister.floatToHex(this.val);
+	}
+
+	public getFloat(): number{
+		return this.val;
+	}
+
+	public fix(n: number){
+		return Math.floor(n);
+	}
+}
+
+export class SicControlRegister{
+	private modeSuper: boolean;
+	private stateRunning: boolean;
+	private pid: number;
+	private conditionCode: number;
+	private maskInterrupt: number;
+	private interuptCode: number;
+}
+
+export type SicCpuOperation = (() => void) | ((op: number) => void) | ((op1: number, op2: number) => void);
+
+export class SicCpu {
+	private static makeRegisters(): { [reg: string]: SicHexRegister } {
+		const reg: { [r: string]: SicHexRegister } = {};
+		reg["A"] = new SicHexRegister(); // accumulator
+		reg["X"] = new SicHexRegister(); // index (relative address)
+		reg["L"] = new SicHexRegister(); // linkage (return)
+		reg["B"] = new SicHexRegister(); // base (xe only)
+		reg["S"] = new SicHexRegister(); // general (xe only)
+		reg["T"] = new SicHexRegister(); // general (xe only)
+		reg["F"] = new SicHexRegister(); // floating point (xe only)
+		reg["PC"] = new SicHexRegister(0x000000); // program-counter (instruction)
+		reg["SW"] = "0".charCodeAt(0); // status-word (flag)
+		return reg;
+	}
+
+	private static makeMemory(maxAddr: number): number[] {
+		const mem: number[] = [];
+		for (let i = 0; i <= maxAddr; ++i) {
+			mem[i] = 0xFF;
+		}
+		return mem;
+	}
+
+	private makeOpcodes(): { [op: string]: SicCpuOperation } {
+		const ret: { [op: string]: SicCpuOperation } = {};
+
+		ret["ADD"] = (memLoc: number) => {
+			this.__sic_validate_addr(memLoc);
+
+			this.registers["A"] += this.__sic_deref24(memLoc);
 			this.__sic_correct_flow("A");
-		}
+		};
 
-		this.opcodes["ADDR"] = (reg1, reg2) => {
-			sic_cpu.__sic_dec_to_reg(reg1);
-			sic_cpu.__sic_dec_to_reg(reg2);
+		ret["ADDR"] = (reg1, reg2) => {
+			SicCpu.__sic_dec_to_reg(reg1);
+			SicCpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] += this.registers[reg1];
 			this.__sic_correct_flow(reg2);
 		}
 
-		this.opcodes["AND"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["AND"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["A"] &= this.__sic_deref24(mem_loc);
+			this.registers["A"] &= this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["CLEAR"] = (reg) => {
-			sic_cpu.__sic_dec_to_reg(reg);
+		ret["CLEAR"] = (reg) => {
+			SicCpu.__sic_dec_to_reg(reg);
 
 			this.registers[reg] = 0x0;
 		}
 
-		this.opcodes["COMP"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["COMP"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
 			let x = this.registers["A"]
-			let y = this.__sic_deref24(mem_loc);
+			let y = this.__sic_deref24(memLoc);
 			if (x > y) {
 				this.registers["SW"] = '>';
 			}
@@ -313,9 +296,9 @@ export class sic_cpu {
 			}
 		}
 
-		this.opcodes["COMPR"] = (reg1, reg2) => {
-			sic_cpu.__sic_dec_to_reg(reg1);
-			sic_cpu.__sic_dec_to_reg(reg2);
+		ret["COMPR"] = (reg1, reg2) => {
+			SicCpu.__sic_dec_to_reg(reg1);
+			SicCpu.__sic_dec_to_reg(reg2);
 
 			let x = this.registers["A"]
 			let y = this.registers["B"]
@@ -333,143 +316,143 @@ export class sic_cpu {
 			}
 		}
 
-		this.opcodes["DIV"] = (mem_loc) => {
-			this.registers["A"] = Math.floor(this.registers["A"] / this.__sic_deref24(mem_loc));
+		ret["DIV"] = (memLoc) => {
+			this.registers["A"] = Math.floor(this.registers["A"] / this.__sic_deref24(memLoc));
 		}
 
-		this.opcodes["DIVR"] = (reg1, reg2) => {
-			sic_cpu.__sic_dec_to_reg(reg1);
-			sic_cpu.__sic_dec_to_reg(reg2);
+		ret["DIVR"] = (reg1, reg2) => {
+			SicCpu.__sic_dec_to_reg(reg1);
+			SicCpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] = Math.floor(this.registers[reg2] / this.registers[reg1]);
 		}
 
-		this.opcodes["J"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["J"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["PC"] = mem_loc;
+			this.registers["PC"] = memLoc;
 		}
 
-		this.opcodes["JEQ"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["JEQ"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
 			if (this.registers["SW"] === '=') {
-				this.opcodes["J"](mem_loc);
+				ret["J"](memLoc);
 			}
 		}
 
-		this.opcodes["JGT"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["JGT"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
 			if (this.registers["SW"] === '>') {
-				this.opcodes["J"](mem_loc);
+				ret["J"](memLoc);
 			}
 		}
 
-		this.opcodes["JLE"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["JLE"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
 			if (this.registers["SW"] === '<') {
-				this.opcodes["J"](mem_loc);
+				ret["J"](memLoc);
 			}
 		}
 
-		this.opcodes["JSUB"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["JSUB"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
 			this.registers["L"] = this.registers["PC"];
-			this.registers["PC"] = mem_loc;
+			this.registers["PC"] = memLoc;
 		}
 
-		this.opcodes["LDA"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDA"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["A"] = this.__sic_deref24(mem_loc);
+			this.registers["A"] = this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["LDB"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDB"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["B"] = this.__sic_deref24(mem_loc);
+			this.registers["B"] = this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["LDCH"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDCH"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["A"] = this.registers["A"] & 0xFFFF00 + this.__sic_deref8(mem_loc);
+			this.registers["A"] = this.registers["A"] & 0xFFFF00 + this.__sic_deref8(memLoc);
 		}
 
-		this.opcodes["LDL"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDL"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["L"] = this.__sic_deref24(mem_loc);
+			this.registers["L"] = this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["LDS"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDS"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["S"] = this.__sic_deref24(mem_loc);
+			this.registers["S"] = this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["LDT"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDT"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["T"] = this.__sic_deref24(mem_loc);
+			this.registers["T"] = this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["LDX"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["LDX"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["X"] = this.__sic_deref24(mem_loc);
+			this.registers["X"] = this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["MUL"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["MUL"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["A"] *= this.__sic_deref24(mem_loc);
+			this.registers["A"] *= this.__sic_deref24(memLoc);
 			this.__sic_correct_flow("A");
 		}
 
-		this.opcodes["MULR"] = (reg1, reg2) => {
-			sic_cpu.__sic_dec_to_reg(reg1);
-			sic_cpu.__sic_dec_to_reg(reg2);
+		ret["MULR"] = (reg1, reg2) => {
+			SicCpu.__sic_dec_to_reg(reg1);
+			SicCpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] *= this.registers[reg1];
 			this.__sic_correct_flow(reg2);
 		}
 
-		this.opcodes["OR"] = (mem_loc) => {
-			this.__sic_validate_addr(mem_loc);
+		ret["OR"] = (memLoc) => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["A"] |= this.__sic_deref24(mem_loc);
+			this.registers["A"] |= this.__sic_deref24(memLoc);
 		}
 
-		this.opcodes["RD"] = (dev_name) => {
+		ret["RD"] = (dev_name) => {
 			this.__sic_validate_rddev(dev_name);
 
 			let dev = this.devices[dev_name];
-			let ch = (<sic_rdfile>dev).get();
+			let ch = (<SicRdFile>dev).get();
 
 			if (ch === undefined) {
 				return 0x4; // EOF
 			}
 
-			this.opcodes["LDCH"](ch);
+			ret["LDCH"](ch);
 		}
 
-		this.opcodes["RMO"] = (reg1, reg2) => {
-			sic_cpu.__sic_dec_to_reg(reg1);
-			sic_cpu.__sic_dec_to_reg(reg2);
+		ret["RMO"] = (reg1, reg2) => {
+			SicCpu.__sic_dec_to_reg(reg1);
+			SicCpu.__sic_dec_to_reg(reg2);
 
 			this.registers[reg2] = this.registers[reg1];
 		}
 
-		this.opcodes["RSUB"] = () => {
+		ret["RSUB"] = () => {
 			this.registers["PC"] = this.registers["L"];
 		}
 
-		this.opcodes["SHIFTL"] = (reg: number, n: number) => {
-			sic_cpu.__sic_dec_to_reg(reg);
+		ret["SHIFTL"] = (reg: number, n: number) => {
+			SicCpu.__sic_dec_to_reg(reg);
 
 			// circular shift. not regular bitshift
 			for (let i = 0; i < n; ++i) {
@@ -479,100 +462,119 @@ export class sic_cpu {
 			}
 		}
 
-		this.opcodes["SHIFTR"] = (reg: number, n: number): void => {
-			sic_cpu.__sic_dec_to_reg(reg);
+		ret["SHIFTR"] = (reg: number, n: number): void => {
+			SicCpu.__sic_dec_to_reg(reg);
 
 			// >> does sign extension, >>> does zero extension
 			this.registers[reg] >>= n;
 		}
 
-		this.opcodes["STA"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["STA"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.__sic_place24(this.registers["A"], mem_loc);
+			this.__sic_place24(this.registers["A"], memLoc);
 		}
 
-		this.opcodes["STB"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["STB"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.__sic_place24(this.registers["B"], mem_loc);
+			this.__sic_place24(this.registers["B"], memLoc);
 		}
 
-		this.opcodes["STCH"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["STCH"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.__sic_place8(this.registers["A"] & 0xFF, mem_loc);
+			this.__sic_place8(this.registers["A"] & 0xFF, memLoc);
 		}
 
-		this.opcodes["STI"] = (mem_loc: number): void => {
+		ret["STI"] = (memLoc: number): void => {
 			throw "sti not implemented yet";
 		}
 
-		this.opcodes["STL"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["STL"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.__sic_place24(this.registers["L"], mem_loc);
+			this.__sic_place24(this.registers["L"], memLoc);
 		}
 
-		this.opcodes["STSW"] = (mem_loc: number): void => {
+		ret["STSW"] = (memLoc: number): void => {
 			throw "stsw not implemented yet";
 		}
 
-		this.opcodes["STT"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["STT"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.__sic_place24(this.registers["T"], mem_loc);
+			this.__sic_place24(this.registers["T"], memLoc);
 		}
 
-		this.opcodes["STX"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["STX"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.__sic_place24(this.registers["X"], mem_loc);
+			this.__sic_place24(this.registers["X"], memLoc);
 		}
 
-		this.opcodes["SUB"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["SUB"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
-			this.registers["A"] -= this.__sic_deref24(mem_loc);
+			this.registers["A"] -= this.__sic_deref24(memLoc);
 			this.__sic_correct_flow("A");
 		}
 
-		this.opcodes["SUBR"] = (reg1: number, reg2: number): void => {
-			let r1 = sic_cpu.__sic_dec_to_reg(reg1);
-			let r2 = sic_cpu.__sic_dec_to_reg(reg2);
+		ret["SUBR"] = (reg1: number, reg2: number): void => {
+			let r1 = SicCpu.__sic_dec_to_reg(reg1);
+			let r2 = SicCpu.__sic_dec_to_reg(reg2);
 
 			this.registers[r2] -= this.registers[r1];
 			this.__sic_correct_flow(r2);
 		}
 
-		this.opcodes["SVC"] = (n: number): void => {
+		ret["SVC"] = (n: number): void => {
 			throw "svc not implemented yet";
 		}
 
-		this.opcodes["TD"] = (dev_name: string): void => {
+		ret["TD"] = (dev_name: string): void => {
 			// THE DEVICE IS ALWAYS READY
 			this.registers["SW"] = '=';
 		}
 
-		this.opcodes["TIX"] = (mem_loc: number): void => {
-			this.__sic_validate_addr(mem_loc);
+		ret["TIX"] = (memLoc: number): void => {
+			this.__sic_validate_addr(memLoc);
 
 			this.registers["X"]++;
-			this.opcodes["COMP"](mem_loc);
+			ret["COMP"](memLoc);
 		}
 
-		this.opcodes["TIXR"] = (reg: number): void => {
-			let q = sic_cpu.__sic_dec_to_reg(reg);
+		ret["TIXR"] = (reg: number): void => {
+			let q = SicCpu.__sic_dec_to_reg(reg);
 
 			this.registers["X"]++;
-			this.opcodes["COMPR"](reg);
+			ret["COMPR"](reg);
 		}
 
-		this.opcodes["WD"] = (dev_name: string): void => {
+		ret["WD"] = (dev_name: string): void => {
 			this.__sic_validate_wrdev(dev_name);
 
-			(<sic_wrfile>this.devices[dev_name]).push(this.registers["A"] & 0xFF);
+			(<SicWrFile>this.devices[dev_name]).push(this.registers["A"] & 0xFF);
 		}
+
+		return ret;
+	}
+
+	public maxAddr: number;
+	public registers: { [reg: string]: number };
+	public memory: number[];
+	public devices: ISicFile[];
+	public opcodes: { [opcode: string]: () => void };
+
+	constructor(maxAddr: number, xe: boolean) {
+		sicCheckUnsigned(maxAddr, 20);
+		this.maxAddr = maxAddr;
+
+		this.registers = SicCpu.makeRegisters();
+		this.memory = SicCpu.makeMemory(this.maxAddr);
+		this.devices = [];
+
+
 	}
 
 	add_rddev(name: string, data: number[]): void {
@@ -584,7 +586,7 @@ export class sic_cpu {
 		if (this.devices[name] != null) {
 			throw "there's already a device with the name " + name;
 		}
-		this.devices[name] = new sic_rdfile(data);
+		this.devices[name] = new SicRdFile(data);
 	}
 
 	rm_rddev(name: string): void {
@@ -598,7 +600,7 @@ export class sic_cpu {
 		if (this.devices[name] != null) {
 			throw "there's already a device with the name " + name;
 		}
-		this.devices[name] = new sic_wrfile();
+		this.devices[name] = new SicWrFile();
 	}
 
 	rm_wrdev(name: string): void {
@@ -608,9 +610,9 @@ export class sic_cpu {
 		delete this.devices[name];
 	}
 
-	__sic_validate_addr(mem_loc: number): void {
-		if (mem_loc < 0x0 || mem_loc > this.max_addr) {
-			throw "mem_loc is outside the addressable range";
+	__sic_validate_addr(memLoc: number): void {
+		if (memLoc < 0x0 || memLoc > this.maxAddr) {
+			throw "memLoc is outside the addressable range";
 		}
 	}
 
@@ -632,98 +634,61 @@ export class sic_cpu {
 		}
 	}
 
-	__sic_deref24(mem_loc: number): number {
-		if (mem_loc < 0x0 || mem_loc > this.max_addr - 0x2) {
-			throw "mem_loc is outside the addressable range";
+	__sic_deref24(memLoc: number): number {
+		if (memLoc < 0x0 || memLoc > this.maxAddr - 0x2) {
+			throw "memLoc is outside the addressable range";
 		}
-		return this.memory[mem_loc] << 16 + this.memory[mem_loc + 1] << 8 + this.memory[mem_loc + 2];
+		return this.memory[memLoc] << 16 + this.memory[memLoc + 1] << 8 + this.memory[memLoc + 2];
 	}
 
-	__sic_deref16(mem_loc: number): number {
-		if (mem_loc < 0x0 || mem_loc > this.max_addr - 0x1) {
-			throw "mem_loc is outside the addressable range";
+	__sic_deref16(memLoc: number): number {
+		if (memLoc < 0x0 || memLoc > this.maxAddr - 0x1) {
+			throw "memLoc is outside the addressable range";
 		}
-		return this.memory[mem_loc] << 8 + this.memory[mem_loc + 1];
+		return this.memory[memLoc] << 8 + this.memory[memLoc + 1];
 	}
 
-	__sic_deref8(mem_loc: number): number {
-		if (mem_loc < 0x0 || mem_loc > this.max_addr) {
-			throw "mem_loc is outside the addressable range";
+	__sic_deref8(memLoc: number): number {
+		if (memLoc < 0x0 || memLoc > this.maxAddr) {
+			throw "memLoc is outside the addressable range";
 		}
-		return this.memory[mem_loc];
+		return this.memory[memLoc];
 	}
 
-	__sic_place24(val: number, mem_loc: number): void {
+	__sic_place24(val: number, memLoc: number): void {
 		if (val < 0x0 || val > 0xFFFFFF) {
 			throw "val is outside a 24-bit range";
 		}
-		if (mem_loc < 0x0 || mem_loc > this.max_addr - 0x2) {
-			throw "mem_loc is outside the addressable range";
+		if (memLoc < 0x0 || memLoc > this.maxAddr - 0x2) {
+			throw "memLoc is outside the addressable range";
 		}
 
-		this.memory[mem_loc] = val & 0xFF0000 >> 16;
-		this.memory[mem_loc + 1] = val & 0xFF00 >> 8;
-		this.memory[mem_loc + 2] = val & 0xFF;
+		this.memory[memLoc] = val & 0xFF0000 >> 16;
+		this.memory[memLoc + 1] = val & 0xFF00 >> 8;
+		this.memory[memLoc + 2] = val & 0xFF;
 	}
 
-	__sic_place16(val: number, mem_loc: number): void {
+	__sic_place16(val: number, memLoc: number): void {
 		if (val < 0x0 || val > 0xFFFF) {
 			throw "val is outside a 16-bit range";
 		}
-		if (mem_loc < 0x0 || mem_loc > this.max_addr - 0x1) {
-			throw "mem_loc is outside the addressable range";
+		if (memLoc < 0x0 || memLoc > this.maxAddr - 0x1) {
+			throw "memLoc is outside the addressable range";
 		}
 
-		this.memory[mem_loc] = val & 0xFF00 >> 8;
-		this.memory[mem_loc + 1] = val & 0xFF;
+		this.memory[memLoc] = val & 0xFF00 >> 8;
+		this.memory[memLoc + 1] = val & 0xFF;
 	}
 
-	__sic_place8(val: number, mem_loc: number): void {
+	__sic_place8(val: number, memLoc: number): void {
 		if (val < 0x0 || val > 0xFF) {
 			throw "val is outside an 8-bit range";
 		}
-		if (mem_loc < 0x0 || mem_loc > this.max_addr) {
-			throw "mem_loc is outside the addressable range";
+		if (memLoc < 0x0 || memLoc > this.maxAddr) {
+			throw "memLoc is outside the addressable range";
 		}
 
-		this.memory[mem_loc] = val;
+		this.memory[memLoc] = val;
 	}
 
-	__sic_correct_flow(reg: string): void {
-		if (this.registers["reg"] == null) {
-			throw "reg " + reg + " does not exist";
-		}
-
-		let x = this.registers["reg"];
-		while (x < 0xFFFFFF) {
-			x += 0xFFFFFF;
-		}
-		x %= 0xFFFFFF;
-		this.registers["reg"] = x;
-	}
-
-	static __sic_dec_to_reg(reg: number): string {
-		switch (reg) {
-			case 0:
-				return "A";
-			case 1:
-				return "X";
-			case 2:
-				return "L";
-			case 3:
-				return "B";
-			case 4:
-				return "S";
-			case 5:
-				return "T";
-			case 6:
-				return "F";
-			case 8:
-				return "PC";
-			case 9:
-				return "SW";
-			default:
-				throw reg + " is not a valid register";
-		}
-	}
 }
