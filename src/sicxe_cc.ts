@@ -168,116 +168,172 @@ export class SicBytecode {
 	}
 }
 
-export enum SicPendingType{
-	tag,
-	literal,
+export class SicBase{
+	public val: number | SicPending;
+
+	constructor(val: number | SicPending){
+		this.val = val;
+		if (this.val instanceof SicPending && typeof (this.val as SicPending).val === "number"){
+			this.val = (this.val as SicPending).val as number;
+		}
+	}
+
+	public ready(): boolean{
+		return typeof this.val === "number";
+	}
+
+	public makeReady(p: {[key: string]: number} | number): void{
+		if (typeof this.val === "number"){
+			return;
+		}
+		if (typeof p === "number"){
+			this.val = p;
+		}
+		const tagTab = p as {[key: string]: number};
+		const pending = this.val as SicPending;
+		const dummyLitTab: {[key: number]: number} = {};
+
+		this.val = pending.convert(tagTab, dummyLitTab);
+	}
 }
 
 export class SicPending{
-	public type: SicPendingType;
-	public val: string;
+	public val: string | number;
 
-	constructor(type: SicPendingType, val: string){
-		this.type = type;
+	constructor(val: string | number){
 		this.val = val;
 	}
 
-	public convert(tagTab: {[key: string]: number}, litTab: {[key: string]: number}): number | undefined{
-		if (this.type === SicPendingType.literal){
-			return litTab[this.val];
+	public convert(tagTab: {[key: string]: number}, litTab: {[key: number]: number}): number{
+		let s: number | undefined;
+		if (typeof this.val === "number"){
+			s = litTab[this.val];
+			if (typeof s === "undefined") {
+				throw new Error(this.val + "was not found in the literal table");
+			}
 		}
-		return tagTab[this.val];
+		else {
+			s = tagTab[this.val];
+			if (typeof s === "undefined") {
+				throw new Error(this.val + "was not found in the tag table");
+			}
+		}
+		return s;
 	}
 }
 
-export enum SicOpType {
+export enum SicOpAddrType {
 	immediate,
 	direct,
 	indirect,
 }
-export class SicOperandF3 {
+
+export enum SicOpType {
+	f3,
+	f4,
+	legacy,
+}
+export class SicOperandAddr {
 	public val: number | SicPending;
 	public type: SicOpType;
+	public addr: SicOpAddrType;
 	public indexed: boolean;
 	public pcrel: boolean;
-	public baserel: boolean;
+	public base: SicBase | undefined;
 
-	constructor(arg: string, baserel: boolean = false) {
+	constructor(arg: string, type: SicOpType, tagList: Set<string>, litList: Set<number>, baserel?: SicBase) {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
 		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
 		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
 		const operandLen = 12;
 
-		const getType = (char: string): SicOpType => {
+		const getType = (char: string): SicOpAddrType => {
 			switch (char) {
 				case "#":
-					return SicOpType.immediate;
+					return SicOpAddrType.immediate;
 				case "@":
-					return SicOpType.indirect;
+					return SicOpAddrType.indirect;
 				case "=":
 				default:
-					return SicOpType.direct;
+					return SicOpAddrType.direct;
 			}
 		};
 
-		const isLiteral = (st: string): boolean => {
-			return st.charAt(0) === "=";
+		const isLiteral = (c: string, val: number): boolean => {
+			litList.add(val);
+			return c.charAt(0) === "=";
 		};
 
-		this.baserel = baserel;
+		this.type = type;
+		this.base = this.type === SicOpType.f3 ? baserel : undefined;
 
 		let match: RegExpMatchArray | null;
 		if ((match = arg.match(reDecimal)) !== null) {
-			this.val = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
-			this.type = getType(match[1]);
+			const x = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
+			this.val = isLiteral(match[1], x) ? new SicPending(x) : x;
+			this.addr = getType(match[1]);
 			this.indexed = match[3] != null;
 			this.pcrel = false;
 		}
 		else if ((match = arg.match(reHex)) !== null) {
-			this.val = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
-			this.type = getType(match[1]);
+			const x = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
+			this.val = isLiteral(match[1], x) ? new SicPending(x) : x;
+			this.addr = getType(match[1]);
 			this.indexed = match[3] != null;
 			this.pcrel = false;
 		}
 		else if ((match = arg.match(reChar)) !== null) {
-			this.val = match[2].charCodeAt(0);
-			this.type = getType(match[1]);
+			const x = match[2].charCodeAt(0);
+			this.val = isLiteral(match[1], x) ? new SicPending(x) : x;
+			this.addr = getType(match[1]);
 			this.indexed = match[3] != null;
 			this.pcrel = false;
 		}
 		else if ((match = arg.match(reTag)) != null) {
-			this.val = new SicPending(SicPendingType.tag, match[2]);
-			this.type = getType(match[1]);
+			this.val = new SicPending(match[2]);
+			if (tagList.has(match[2])){
+				throw new Error(this.val + " was already used as a label.");
+			}
+			tagList.add(match[2]);
+			this.addr = getType(match[1]);
 			this.indexed = match[3] != null;
-			this.pcrel = !this.baserel;
+			this.pcrel = this.type === SicOpType.f3;
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
 		}
+
+		if (this.addr !== SicOpAddrType.direct && this.type === SicOpType.legacy){
+			throw new Error("SIC Legacy instructions can only use direct addressing");
+		}
 	}
 
 	public ready(): boolean {
-		return typeof this.val === "number";
+		return typeof this.val === "number" &&
+			(this.base === undefined || (this.base as SicBase).ready());
 	}
 
-	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
+	public makeReady(locctr: number, tagTab: { [key: string]: number }, litTab: { [key: number]: number }): void {
 		if (typeof this.val === "number") {
 			return;
 		}
+
+		this.val = this.val.convert(tagTab, litTab);
+
 		const len = 12;
 		if (this.pcrel) {
 			try {
-				this.val = sicMakeUnsigned(tagCallback(this.val) - loc, len);
+				this.val = sicMakeUnsigned(this.val - (locctr + 3), len);
 			}
 			// too big for pcrel, try direct
 			catch (e) {
 				this.pcrel = false;
-				this.val = sicMakeUnsigned(tagCallback(this.val), len);
+				sicCheckUnsigned(this.val, len);
 			}
 		}
 		else {
-			this.val = sicMakeUnsigned(tagCallback(this.val), len);
+			sicCheckUnsigned(this.val, len);
 		}
 	}
 
@@ -285,20 +341,20 @@ export class SicOperandF3 {
 		let n: boolean;
 		let i: boolean;
 		const x = this.indexed;
-		const b = this.baserel;
+		const b = !this.pcrel && this.base !== undefined;
 		const p = this.pcrel;
-		const e = true;
+		const e = this.type !== SicOpType.f3;
 
-		switch (this.type) {
-			case SicOpType.direct:
+		switch (this.addr) {
+			case SicOpAddrType.direct:
 				n = true;
 				i = true;
 				break;
-			case SicOpType.indirect:
+			case SicOpAddrType.indirect:
 				n = true;
 				i = false;
 				break;
-			case SicOpType.immediate:
+			case SicOpAddrType.immediate:
 				n = false;
 				i = true;
 				break;
@@ -326,165 +382,6 @@ export class SicOperandF3 {
 			bytes[1] |= 0x10;
 		}
 		return bytes;
-	}
-}
-
-export class SicOperandF4 {
-	public val: number | string;
-	public type: SicOpType;
-	public indexed: boolean;
-
-	constructor(arg: string) {
-		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
-		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
-		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
-		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
-		const operandLen = 20;
-
-		const getType = (char: string): SicOpType => {
-			switch (char) {
-				case "#":
-				case "=":
-					return SicOpType.immediate;
-				case "@":
-					return SicOpType.indirect;
-				default:
-					return SicOpType.direct;
-			}
-		};
-
-		let match: RegExpMatchArray | null;
-		if ((match = arg.match(reDecimal)) !== null) {
-			this.val = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
-			this.type = getType(match[1]);
-			this.indexed = match[3] != null;
-		}
-		else if ((match = arg.match(reHex)) !== null) {
-			this.val = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
-			this.type = getType(match[1]);
-			this.indexed = match[3] != null;
-		}
-		else if ((match = arg.match(reChar)) !== null) {
-			this.val = match[2].charCodeAt(0);
-			this.type = getType(match[1]);
-			this.indexed = match[3] != null;
-		}
-		else if ((match = arg.match(reTag)) != null) {
-			this.val = match[2];
-			this.type = getType(match[1]);
-			this.indexed = match[3] != null;
-		}
-		else {
-			throw new Error("Operand " + arg + " is not of any valid format.");
-		}
-	}
-
-	public ready(): boolean {
-		return typeof this.val === "number";
-	}
-
-	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
-		if (typeof this.val === "number") {
-			return;
-		}
-		this.val = sicMakeUnsigned(tagCallback(this.val), 20);
-	}
-
-	public nixbpe(): number[] {
-		let n: boolean;
-		let i: boolean;
-		const x = this.indexed;
-		const b = false;
-		const p = false;
-		const e = true;
-
-		switch (this.type) {
-			case SicOpType.direct:
-				n = true;
-				i = true;
-				break;
-			case SicOpType.indirect:
-				n = true;
-				i = false;
-				break;
-			case SicOpType.immediate:
-				n = false;
-				i = true;
-				break;
-			default:
-				throw new Error("Registers do not have an nixbpe value");
-		}
-
-		const bytes = [0x0, 0x0];
-		if (n) {
-			bytes[0] |= 0x2;
-		}
-		if (i) {
-			bytes[0] |= 0x1;
-		}
-		if (x) {
-			bytes[1] |= 0x80;
-		}
-		if (b) {
-			bytes[1] |= 0x40;
-		}
-		if (p) {
-			bytes[1] |= 0x20;
-		}
-		if (e) {
-			bytes[1] |= 0x10;
-		}
-		return bytes;
-	}
-}
-
-export class SicOperandLegacy {
-	public val: number | string;
-	public indexed: boolean;
-
-	constructor(arg: string, format4: boolean, baserel: boolean = false) {
-		const reRegister = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$");
-		const reDecimal = new RegExp("^(\\d+)(,X)?$");
-		const reHex = new RegExp("^X'([0-9A-F]+)'(,X)?$");
-		const reChar = new RegExp("^C'(.)'(,X)?$");
-		const reTag = new RegExp("^([A-Z0-9]+)(,X)?$");
-		const operandLen = 15;
-
-		let match: RegExpMatchArray | null;
-		if ((match = arg.match(reRegister)) !== null) {
-			this.val = sicRegToDec(match[1]);
-			this.indexed = false;
-		}
-		else if ((match = arg.match(reDecimal)) !== null) {
-			this.val = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
-			this.indexed = match[3] != null;
-		}
-		else if ((match = arg.match(reHex)) !== null) {
-			this.val = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
-			this.indexed = match[3] != null;
-		}
-		else if ((match = arg.match(reChar)) !== null) {
-			this.val = match[2].charCodeAt(0);
-			this.indexed = match[3] != null;
-		}
-		else if ((match = arg.match(reTag)) != null) {
-			this.val = match[2];
-			this.indexed = match[3] != null;
-		}
-		else {
-			throw new Error("Operand " + arg + " is not of any valid format.");
-		}
-	}
-
-	public ready(): boolean {
-		return typeof this.val === "number";
-	}
-
-	public convertTag(tagCallback: (tag: string) => number): void {
-		if (typeof this.val === "number") {
-			return;
-		}
-		this.val = sicMakeUnsigned(tagCallback(this.val), 15);
 	}
 }
 
@@ -595,19 +492,19 @@ export class SicFormat3 {
 	}
 
 	public bc: SicBytecode;
-	public op: SicOperandF3;
+	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, baserel: boolean = false) {
+	constructor(line: SicSplit, tagSet: Set<string>, litSet: Set<number>, baserel?: SicBase) {
 		if (!SicFormat3.isFormat3(line.op)) {
 			throw new Error(line.op + " is not format 3");
 		}
 
 		this.bc = new SicBytecode(line.op);
-		this.op = new SicOperandF3(line.args, baserel);
+		this.op = new SicOperandAddr(line.args, SicOpType.f3, tagSet, litSet, baserel);
 	}
 
-	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
-		this.op.convertTag(loc, tagCallback);
+	public makeReady(locctr: number, tagTab: { [key: string]: number }, litTab: { [key: number]: number }): void {
+		this.op.makeReady(locctr, tagTab, litTab);
 	}
 
 	public ready(): boolean {
@@ -640,24 +537,19 @@ export class SicFormatLegacy {
 	}
 
 	public bc: SicBytecode;
-	public op: SicOperandF3;
+	public op: SicOperandAddr;
 
-	constructor(line: SicSplit) {
+	constructor(line: SicSplit, tagList: Set<string>, litList: Set<number>) {
 		if (!SicFormatLegacy.isFormatLegacy(line.op)) {
 			throw new Error(line.op + " is not SIC legacy format");
 		}
 
 		this.bc = new SicBytecode(line.op);
-		this.op = new SicOperandF3(line.args, false);
-
-		if (this.op.type !== SicOpType.direct) {
-			throw new Error("SIC legacy operands cannot use indirect or immediate addressing.");
-		}
-		this.op.pcrel = false;
+		this.op = new SicOperandAddr(line.args, SicOpType.legacy, tagList, litList);
 	}
 
-	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
-		this.op.convertTag(loc, tagCallback);
+	public makeReady(loc: number, tagTab: {[key: string]: number}, litTab: {[key: number]: number}): void {
+		this.op.makeReady(loc, tagTab, litTab);
 	}
 
 	public ready(): boolean {
@@ -690,19 +582,19 @@ export class SicFormat4 {
 	}
 
 	public bc: SicBytecode;
-	public op: SicOperandF3;
+	public op: SicOperandAddr;
 
-	constructor(line: SicSplit) {
+	constructor(line: SicSplit, tagList: Set<string>, litList: Set<number>) {
 		if (!SicFormat4.isFormat4(line.op)) {
 			throw new Error(line.op + " is not format 4");
 		}
 
 		this.bc = new SicBytecode(line.op);
-		this.op = new SicOperandF3(line.args, true);
+		this.op = new SicOperandAddr(line.args, SicOpType.f4, tagList, litList);
 	}
 
-	public convertTag(loc: number, tagCallback: (tag: string) => number): void {
-		this.op.convertTag(loc, tagCallback);
+	public makeReady(loc: number, tagTab: {[key: string]: number}, litTab: {[key: number]: number}): void {
+		this.op.makeReady(loc, tagTab, litTab);
 	}
 
 	public ready(): boolean {
@@ -861,30 +753,73 @@ export class SicLstEntry {
 	}
 }
 
+export class SicLitTab{
+	public loc: number;
+	public vals: {[key: number]: number};
+
+	constructor(loc: number, vals: {[key: number]: number}){
+		this.loc = loc;
+		this.vals = vals;
+	}
+}
+
 export class SicCompiler {
 	private static isDirective(mnemonic: string) {
-		const re = new RegExp("^(START|END|BASE|NOBASE|LTORG)$");
+		const re = new RegExp("^(START|END|BASE|NOBASE|LTORG|EQU|USE)$");
 		return re.test(mnemonic);
 	}
 
+	private lines: SicCodeLine[];
+	private lst: Array<SicLstEntry | string>;
+	private startName: string | undefined;
+
+	private litTab: SicLitTab[];
 	private tagTab: { [key: string]: number };
-	private litTab: { [key: string]: number };
 	private equTab: { [key: string]: number };
 	private useTab: { [key: string]: number };
 
-	public lines: SicCodeLine[];
-	public lst: SicLstEntry[];
-
 	constructor(lines: string[]) {
-		const splits = lines
-			.map(str => str.replace(/\..+$/, ""))
-			.filter(str => str.trim() !== "")
-			.map(val => new SicSplit(val));
+		let litList = new Set<number>();
+		let tagList = new Set<string>();
+		let baserel: number | undefined = 0xFFFFFF;
+		let loc = 0;
+
+		const directiveOps = {
+			START: (split: SicSplit) => {
+				if (loc !== 0){
+					throw new Error("START can only be used as the first line of a program.");
+				}
+				this.startName = split.tag;
+				loc = parseInt(split.args, 16);
+			},
+
+			END: (split: SicSplit) => {
+				if (split.args !== this.startName){
+					throw new Error("END label must be the same as the start label.");
+				}
+			},
+
+			BASE: (split: SicSplit) => {
+				this.baserel = true;
+			},
+		};
+
+		lines.forEach(val => {
+			try{
+				const s = val.replace(/\..+$/, "");
+				if (s === ""){
+					return;
+				}
+				const split = new SicSplit(s);
+			}
+			catch (e){
+				this.lst.push(e);
+			}
+		});
 
 		this.lines = [];
 		this.lst = [];
 
-		let startName: string | undefined;
 		let baseTag: string | undefined;
 		let locCurrent = 0;
 
