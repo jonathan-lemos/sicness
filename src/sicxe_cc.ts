@@ -321,19 +321,33 @@ export class SicOperandAddr {
 
 		this.val = this.val.convert(tagTab, litTab);
 
-		const len = 12;
+		let maxAddr: number;
+		switch (this.type){
+			case SicOpType.f3:
+				maxAddr = 12;
+				break;
+			case SicOpType.legacy:
+				maxAddr = 15;
+				break;
+			case SicOpType.f4:
+				maxAddr = 20;
+				break;
+			default:
+				throw new Error("type is not valid");
+		}
+
 		if (this.pcrel) {
 			try {
-				this.val = sicMakeUnsigned(this.val - (locctr + 3), len);
+				this.val = sicMakeUnsigned(this.val - (locctr + 3), maxAddr);
 			}
 			// too big for pcrel, try direct
 			catch (e) {
 				this.pcrel = false;
-				sicCheckUnsigned(this.val, len);
+				sicCheckUnsigned(this.val, maxAddr);
 			}
 		}
 		else {
-			sicCheckUnsigned(this.val, len);
+			sicCheckUnsigned(this.val, maxAddr);
 		}
 	}
 
@@ -724,24 +738,27 @@ export class SicSpace {
 
 export class SicCodeLine {
 	public instr: ISicInstruction;
-	public loc: number;
+	public aloc: number;
+	public rloc: number;
 	public tag: string;
 	public str: string;
-	constructor(instr: ISicInstruction, loc: number, tag: string, str: string) {
+
+	constructor(instr: ISicInstruction, aloc: number, rloc: number, tag: string, str: string) {
 		this.instr = instr;
-		this.loc = loc;
+		this.aloc = aloc;
+		this.rloc = rloc;
 		this.tag = tag;
 		this.str = str;
 	}
 }
 
 export class SicLstEntry {
-	public loc: string;
+	public rloc: string;
 	public bytecode: string;
 	public instr: string;
 
-	constructor(loc: string, bytecode: string, instr: string) {
-		this.loc = loc;
+	constructor(rloc: string, bytecode: string, instr: string) {
+		this.rloc = rloc;
 		if (bytecode.length <= 8) {
 			this.bytecode = bytecode;
 		}
@@ -753,13 +770,115 @@ export class SicLstEntry {
 	}
 }
 
-export class SicLitTab{
-	public loc: number;
-	public vals: {[key: number]: number};
+export class SicLitTab {
+	public ltorgs: SicLtorg[];
+	public pending: Set<number>;
 
-	constructor(loc: number, vals: {[key: number]: number}){
+	constructor(){
+		this.ltorgs = [];
+		this.pending = new Set<number>();
+	}
+
+	public getLitLoc(n: number, pc: number = 0): number | undefined{
+		let diffMin = Number.MAX_SAFE_INTEGER;
+		let loc: number | undefined;
+		for (const lt of this.ltorgs) {
+			let v: number;
+			try{
+				v = lt.getLoc(n);
+			}
+			catch (e){
+				continue;
+			}
+
+			if (diffMin > v - pc){
+				diffMin = v - pc;
+				loc = v;
+			}
+		}
+		return loc;
+	}
+
+	public createOrg(loc: number): SicLtorg{
+		const ltorg = new SicLtorg(loc, this.pending);
+		this.pending = new Set<number>();
+		this.ltorgs.push(ltorg);
+		return ltorg;
+	}
+}
+
+export class SicLtorg {
+	public loc: number;
+	public vals: number[];
+
+	constructor(loc: number, vals: Set<number>){
 		this.loc = loc;
-		this.vals = vals;
+		this.vals = [];
+		vals.forEach(v => this.vals.push(v));
+	}
+
+	public includes(n: number): boolean{
+		return this.vals.includes(n);
+	}
+
+	public getLoc(n: number): number{
+		for (let i = 0; i < this.vals.length; ++i){
+			if (this.vals[i] === n){
+				return this.loc + 3 * i;
+			}
+		}
+		throw new Error(n + " was not found in this LTORG");
+	}
+
+	public ready(): boolean{
+		return true;
+	}
+
+	public length(): number{
+		return 3 * Object.keys(this.vals).length;
+	}
+
+	public toBytes(): number[]{
+		const s: number[] = [];
+		Object.values(this.vals).forEach(n => s.concat([(n & 0xFF0000) >>> 16, (n & 0xFF00) >>> 8, (n & 0xFF)]));
+		return s;
+	}
+}
+
+export class SicUseTab {
+	public useTab: {[key: string]: number};
+	public currentUse: string;
+	private startloc: number;
+	private RLOC: number;
+	private ALOC: number;
+
+	constructor(startloc: number){
+		this.ALOC = this.RLOC = this.startloc = startloc;
+		this.useTab = {};
+		this.currentUse = "";
+	}
+
+	public get aloc(){
+		return this.ALOC;
+	}
+
+	public get rloc(){
+		return this.RLOC;
+	}
+
+	public inc(n: number){
+		this.RLOC += n;
+		this.ALOC += n;
+	}
+
+	public use(label: string){
+		this.useTab[this.currentUse] = this.RLOC;
+		this.currentUse = label;
+		let x = this.useTab[label];
+		if (x === undefined){
+			x = this.startloc;
+		}
+		this.RLOC = x;
 	}
 }
 
@@ -770,49 +889,103 @@ export class SicCompiler {
 	}
 
 	private lines: SicCodeLine[];
-	private lst: Array<SicLstEntry | string>;
+	private lst: SicLstEntry[];
 	private startName: string | undefined;
 
-	private litTab: SicLitTab[];
+	private litTab: SicLitTab;
 	private tagTab: { [key: string]: number };
-	private equTab: { [key: string]: number };
-	private useTab: { [key: string]: number };
+	private equTab: { [key: string]: string };
+	private useTab: SicUseTab;
 
 	constructor(lines: string[]) {
-		let litList = new Set<number>();
-		let tagList = new Set<string>();
-		let baserel: number | undefined = 0xFFFFFF;
-		let loc = 0;
+		let baserel: SicBase | undefined;
 
-		const directiveOps = {
-			START: (split: SicSplit) => {
-				if (loc !== 0){
+		this.tagTab = {};
+		this.equTab = {};
+		this.useTab = new SicUseTab(0);
+		this.litTab = new SicLitTab();
+
+		const parseNum = (val: string): number => {
+			const reDec = new RegExp("^(\\d+)$");
+			const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
+			const reChar = new RegExp("^C'.{1,3}'$");
+			let match: RegExpMatchArray | null;
+
+			if ((match = val.match(reDec)) !== null){
+				return parseInt(match[1], 10);
+			}
+			if ((match = val.match(reHex)) !== null){
+				return parseInt(match[1], 16);
+			}
+			if ((match = val.match(reChar)) !== null){
+				let x = 0;
+				for (let ptr = 0, s = match[1]; s !== ""; ptr += 8, s = s.slice(0, -1)){
+					x += s.charCodeAt(s.length - 1) << ptr;
+				}
+				return x;
+			}
+			throw new Error(val + " was not of a valid numeric format.");
+		};
+
+		const mkCodeLine = (instr: ISicInstruction, split: SicSplit): SicCodeLine =>
+			new SicCodeLine(instr, this.useTab.aloc, this.useTab.rloc, split.tag, split.str);
+
+		const directiveOps: {[key: string]: (split: SicSplit) => void} = {
+			START: (split: SicSplit): void => {
+				if (this.useTab.aloc !== 0){
 					throw new Error("START can only be used as the first line of a program.");
 				}
 				this.startName = split.tag;
-				loc = parseInt(split.args, 16);
+				this.useTab = new SicUseTab(parseInt(split.args, 16));
 			},
 
-			END: (split: SicSplit) => {
+			END: (split: SicSplit): void => {
 				if (split.args !== this.startName){
 					throw new Error("END label must be the same as the start label.");
 				}
 			},
 
-			BASE: (split: SicSplit) => {
-				this.baserel = true;
+			BASE: (split: SicSplit): void => {
+				try {
+					baserel = new SicBase(parseNum(split.args));
+				}
+				catch (e){
+					baserel = new SicBase(new SicPending(split.args));
+				}
+			},
+
+			NOBASE: (split: SicSplit): void => {
+				baserel = undefined;
+			},
+
+			LTORG: (split: SicSplit): void => {
+				this.lines.push(mkCodeLine(this.litTab.createOrg(this.useTab.aloc), split));
+			},
+
+			EQU: (split: SicSplit): void => {
+				if (split.tag === ""){
+					throw new Error("EQU needs a non-empty label.");
+				}
+				if (this.equTab[split.args] !== undefined){
+					throw new Error("EQU " + split.args + " was already defined.");
+				}
+				this.equTab[split.tag] = split.args;
+			},
+
+			USE: (split: SicSplit): void => {
+				this.useTab.use(split.args);
 			},
 		};
 
 		lines.forEach(val => {
-			try{
+			try {
 				const s = val.replace(/\..+$/, "");
-				if (s === ""){
+				if (s === "") {
 					return;
 				}
 				const split = new SicSplit(s);
 			}
-			catch (e){
+			catch (e) {
 				this.lst.push(e);
 			}
 		});
