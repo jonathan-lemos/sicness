@@ -38,9 +38,12 @@ export class SicSplit {
 	public args: string;
 
 	constructor(line: string) {
+		line = line.replace(/\..*$/, "").toUpperCase();
+
 		const lineArr = line.split(/\s+/);
 		if (lineArr.length <= 1) {
-			throw new Error("lineArr does not have the required 2 entries");
+			throw new Error(
+				"This line does not have the correct number of entries. Did you forget to put whitespace before the operand?");
 		}
 		this.tag = lineArr[0];
 		this.op = lineArr[1];
@@ -53,7 +56,7 @@ export class SicSplit {
 	}
 }
 
-export class BytecodeTableEntry{
+export class SicBytecode {
 	public mnemonic: string;
 	public opcode: number;
 	public format: number;
@@ -65,109 +68,65 @@ export class BytecodeTableEntry{
 	}
 }
 
-export const bytecodeTable: {[key: string]: BytecodeTableEntry} = {
-	ADD: new BytecodeTableEntry("ADD", 0x18, 3),
-	ADDF: new BytecodeTableEntry("ADDF", 0x58, 3),
-	ADDR: new BytecodeTableEntry("ADDR", 0x90, 2),
-	AND: new BytecodeTableEntry("AND", 0x40, 3),
-	CLEAR: new BytecodeTableEntry("CLEAR", 0xB4, 2),
-	COMP: new BytecodeTableEntry("COMP", 0x28, 3),
-	COMPF: new BytecodeTableEntry("COMPF", 0x88, 3),
-	COMPR: new BytecodeTableEntry("COMPR", 0xA0, 2),
-	DIV: new BytecodeTableEntry("DIV", 0x24, 3),
-	DIVF: new BytecodeTableEntry("DIVF", 0x64, 3),
-	DIVR: new BytecodeTableEntry("DIVR", 0x9C, 2),
-	FIX: new BytecodeTableEntry("FIX", 0xC4, 1),
-	FLOAT: new BytecodeTableEntry("FLOAT", 0xC0, 1),
-	HIO: new BytecodeTableEntry("HIO", 0xF4, 1),
-	J: new BytecodeTableEntry("J", 0x3C, 3),
-	JEQ: new BytecodeTableEntry("JEQ", 0x30, 3),
-	JLT: new BytecodeTableEntry("JLT", 0x38, 3),
-	JSUB: new BytecodeTableEntry("JSUB", 0x48, 3),
-	LDA: new BytecodeTableEntry("LDA", 0x00, 3),
-	LDB: new BytecodeTableEntry("LDB", 0x68, 3),
-	LDCH: new BytecodeTableEntry("LDCH", 0x50, 3),
-	LDF: new BytecodeTableEntry("LDF", 0x70, 3),
-	LDL: new BytecodeTableEntry("LDL", 0x08, 3),
-	LDS: new BytecodeTableEntry("LDS", 0x6C, 3),
-	LDT: new BytecodeTableEntry("LDT", 0x74, 3),
-	LDX: new BytecodeTableEntry("LDX", 0x04, 3),
-	LPS: new BytecodeTableEntry("LPS", 0xD0, 3),
-	MUL: new BytecodeTableEntry("MUL", 0x20, 3),
-	MULF: new BytecodeTableEntry("MULF", 0x60, 3),
-	MULR: new BytecodeTableEntry("MULR", 0x98, 2),
-	NORM: new BytecodeTableEntry("NORM", 0xC8, 1),
-	OR: new BytecodeTableEntry("OR", 0x44, 3),
-	RD: new BytecodeTableEntry("RD", 0xD8, 3),
-	RMO: new BytecodeTableEntry("RMO", 0xAC, 2),
-	RSUB: new BytecodeTableEntry("RSUB", 0x4C, 3),
-	SHIFTL: new BytecodeTableEntry("SHIFTL", 0xA4, 2),
-	SHIFTR: new BytecodeTableEntry("SHIFTR", 0xA8, 2),
-	SIO: new BytecodeTableEntry("SIO", 0xF0, 1),
-	SSK: new BytecodeTableEntry("SSK", 0xEC, 3),
-	STA: new BytecodeTableEntry("STA", 0x0C, 3),
-	STB: new BytecodeTableEntry("STB", 0x78, 3),
-	STCH: new BytecodeTableEntry("STCH", 0x54, 3),
-	STF: new BytecodeTableEntry("STF", 0x80, 3),
-	STI: new BytecodeTableEntry("STI", 0xD4, 3),
-	STS: new BytecodeTableEntry("STS", 0x7C, 3),
-	STSW: new BytecodeTableEntry("STSW", 0xE8, 3),
-	STT: new BytecodeTableEntry("STT", 0x84, 3),
-	STX: new BytecodeTableEntry("STX", 0x10, 3),
-	SUB: new BytecodeTableEntry("SUB", 0x1C, 3),
-	SUBF: new BytecodeTableEntry("SUBF", 0x5C, 3),
-	SUBR: new BytecodeTableEntry("SUBR", 0x94, 2),
-	SVC: new BytecodeTableEntry("SVC", 0xB0, 2),
-	TD: new BytecodeTableEntry("TD", 0xE0, 3),
-	TIO: new BytecodeTableEntry("TIO", 0xF8, 1),
-	TIX: new BytecodeTableEntry("TIX", 0x2C, 3),
-	TIXR: new BytecodeTableEntry("TIXR", 0xB8, 2),
-	WD: new BytecodeTableEntry("WD", 0xDC, 3),
+export const bytecodeTable: {[key: string]: SicBytecode} = {
+	ADD: new SicBytecode("ADD", 0x18, 3),
+	ADDF: new SicBytecode("ADDF", 0x58, 3),
+	ADDR: new SicBytecode("ADDR", 0x90, 2),
+	AND: new SicBytecode("AND", 0x40, 3),
+	CLEAR: new SicBytecode("CLEAR", 0xB4, 2),
+	COMP: new SicBytecode("COMP", 0x28, 3),
+	COMPF: new SicBytecode("COMPF", 0x88, 3),
+	COMPR: new SicBytecode("COMPR", 0xA0, 2),
+	DIV: new SicBytecode("DIV", 0x24, 3),
+	DIVF: new SicBytecode("DIVF", 0x64, 3),
+	DIVR: new SicBytecode("DIVR", 0x9C, 2),
+	FIX: new SicBytecode("FIX", 0xC4, 1),
+	FLOAT: new SicBytecode("FLOAT", 0xC0, 1),
+	HIO: new SicBytecode("HIO", 0xF4, 1),
+	J: new SicBytecode("J", 0x3C, 3),
+	JEQ: new SicBytecode("JEQ", 0x30, 3),
+	JLT: new SicBytecode("JLT", 0x38, 3),
+	JSUB: new SicBytecode("JSUB", 0x48, 3),
+	LDA: new SicBytecode("LDA", 0x00, 3),
+	LDB: new SicBytecode("LDB", 0x68, 3),
+	LDCH: new SicBytecode("LDCH", 0x50, 3),
+	LDF: new SicBytecode("LDF", 0x70, 3),
+	LDL: new SicBytecode("LDL", 0x08, 3),
+	LDS: new SicBytecode("LDS", 0x6C, 3),
+	LDT: new SicBytecode("LDT", 0x74, 3),
+	LDX: new SicBytecode("LDX", 0x04, 3),
+	LPS: new SicBytecode("LPS", 0xD0, 3),
+	MUL: new SicBytecode("MUL", 0x20, 3),
+	MULF: new SicBytecode("MULF", 0x60, 3),
+	MULR: new SicBytecode("MULR", 0x98, 2),
+	NORM: new SicBytecode("NORM", 0xC8, 1),
+	OR: new SicBytecode("OR", 0x44, 3),
+	RD: new SicBytecode("RD", 0xD8, 3),
+	RMO: new SicBytecode("RMO", 0xAC, 2),
+	RSUB: new SicBytecode("RSUB", 0x4C, 3),
+	SHIFTL: new SicBytecode("SHIFTL", 0xA4, 2),
+	SHIFTR: new SicBytecode("SHIFTR", 0xA8, 2),
+	SIO: new SicBytecode("SIO", 0xF0, 1),
+	SSK: new SicBytecode("SSK", 0xEC, 3),
+	STA: new SicBytecode("STA", 0x0C, 3),
+	STB: new SicBytecode("STB", 0x78, 3),
+	STCH: new SicBytecode("STCH", 0x54, 3),
+	STF: new SicBytecode("STF", 0x80, 3),
+	STI: new SicBytecode("STI", 0xD4, 3),
+	STS: new SicBytecode("STS", 0x7C, 3),
+	STSW: new SicBytecode("STSW", 0xE8, 3),
+	STT: new SicBytecode("STT", 0x84, 3),
+	STX: new SicBytecode("STX", 0x10, 3),
+	SUB: new SicBytecode("SUB", 0x1C, 3),
+	SUBF: new SicBytecode("SUBF", 0x5C, 3),
+	SUBR: new SicBytecode("SUBR", 0x94, 2),
+	SVC: new SicBytecode("SVC", 0xB0, 2),
+	TD: new SicBytecode("TD", 0xE0, 3),
+	TIO: new SicBytecode("TIO", 0xF8, 1),
+	TIX: new SicBytecode("TIX", 0x2C, 3),
+	TIXR: new SicBytecode("TIXR", 0xB8, 2),
+	WD: new SicBytecode("WD", 0xDC, 3),
 };
-
-export class SicBytecode {
-	public static isBytecode(mnemonic: string): boolean {
-		return bytecodeTable[mnemonic] !== undefined;
-	}
-
-	public opcode: number;
-	public format: number;
-	public mnemonic: string;
-
-	constructor(mnemonic: string) {
-		const format4flag = mnemonic.charAt(0) === "+";
-		if (format4flag) {
-			mnemonic = mnemonic.slice(1);
-		}
-		this.mnemonic = mnemonic;
-
-		const bc = bytecodeTable[mnemonic];
-		if (bc === undefined) {
-			throw new Error(mnemonic + " is not a bytecode");
-		}
-
-		// sanity check
-		sicCheckUnsigned(bc.opcode, 8);
-		if ((bc.opcode & 0x3) !== 0) {
-			throw new Error("This is a bug. The last 2 bits of the opcode must be clear.");
-		}
-
-		if (format4flag) {
-			if (bc.format !== 3) {
-				throw new Error("format 4 cannot be used with opcode " + mnemonic);
-			}
-			this.format = 4;
-		}
-		else{
-			this.format = bc.format;
-		}
-		this.opcode = bc.opcode;
-	}
-
-	public length(): number {
-		return this.format;
-	}
-}
 
 export class SicBase {
 	public val: number | SicPending;
@@ -252,8 +211,8 @@ export class SicOperandAddr {
 	public type: SicOpType;
 	public addr: SicOpAddrType;
 	public indexed: boolean;
-	public pcrel: boolean;
 	public base: SicBase | undefined;
+	public pcrel: boolean;
 
 	constructor(arg: string, type: SicOpType, tagList: Set<string>, litList: Set<number>, baserel?: SicBase) {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
@@ -274,58 +233,71 @@ export class SicOperandAddr {
 			}
 		};
 
-		const isLiteral = (c: string, val: number): boolean => {
-			litList.add(val);
-			return c.charAt(0) === "=";
-		};
+		const isLiteral = (c: string): boolean => c.charAt(0) === "=";
 
 		this.type = type;
 		this.base = this.type === SicOpType.f3 ? baserel : undefined;
+		this.pcrel = this.type === SicOpType.f3;
 
 		let match: RegExpMatchArray | null;
 		if ((match = arg.match(reDecimal)) !== null) {
 			const x = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
-			this.val = isLiteral(match[1], x) ? new SicPending(x) : x;
+			if (isLiteral(match[1])) {
+				litList.add(x);
+				this.val = new SicPending(x);
+			}
+			else{
+				this.val = x;
+			}
 			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
-			this.pcrel = false;
+			this.indexed = match[3] !== null;
 		}
 		else if ((match = arg.match(reHex)) !== null) {
 			const x = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
-			this.val = isLiteral(match[1], x) ? new SicPending(x) : x;
+			if (isLiteral(match[1])) {
+				litList.add(x);
+				this.val = new SicPending(x);
+			}
+			else{
+				this.val = x;
+			}
 			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
-			this.pcrel = false;
+			this.indexed = match[3] !== null;
 		}
 		else if ((match = arg.match(reChar)) !== null) {
 			const x = match[2].charCodeAt(0);
-			this.val = isLiteral(match[1], x) ? new SicPending(x) : x;
+			if (isLiteral(match[1])) {
+				litList.add(x);
+				this.val = new SicPending(x);
+			}
+			else{
+				this.val = x;
+			}
 			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
-			this.pcrel = false;
+			this.indexed = match[3] !== null;
 		}
 		else if ((match = arg.match(reTag)) != null) {
 			this.val = new SicPending(match[2]);
-			if (tagList.has(match[2])){
+			if (tagList.has(match[2])) {
 				throw new Error(this.val + " was already used as a label.");
 			}
 			tagList.add(match[2]);
 			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
-			this.pcrel = this.type === SicOpType.f3;
+			this.indexed = match[3] !== null;
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
 		}
 
-		if (this.addr !== SicOpAddrType.direct && this.type === SicOpType.legacy){
+		if (this.addr !== SicOpAddrType.direct && this.type === SicOpType.legacy) {
 			throw new Error("SIC Legacy instructions can only use direct addressing");
 		}
 	}
 
 	public ready(): boolean {
-		return typeof this.val === "number" &&
-			(this.base === undefined || (this.base as SicBase).ready());
+		return !this.pcrel &&
+			typeof this.val === "number" &&
+			(this.base === undefined || this.base.ready());
 	}
 
 	public makeReady(pc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
@@ -333,14 +305,14 @@ export class SicOperandAddr {
 			return;
 		}
 
-		if (this.base !== undefined){
+		if (this.base !== undefined) {
 			(this.base as SicBase).makeReady(tagTab);
 		}
 
 		this.val = this.val.convert(tagTab, litTab);
 
 		let maxAddr: number;
-		switch (this.type){
+		switch (this.type) {
 			case SicOpType.f3:
 				maxAddr = 12;
 				break;
@@ -365,7 +337,7 @@ export class SicOperandAddr {
 		}
 		if (this.base) {
 			try {
-				sicCheckUnsigned(this.val - (this.base.val as number), maxAddr);
+				this.val = sicMakeUnsigned(this.val - (this.base.val as number), maxAddr);
 				return;
 			}
 			catch (e) {
@@ -427,10 +399,10 @@ interface ISicInstruction {
 	ready(): boolean;
 	length(): number;
 	toBytes(): number[];
-	makeReady(loc: number, tagTab: {[key: string]: number}, litTab: SicLitTab): void;
+	makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void;
 }
 
-export class SicFormat1 {
+export class SicFormat1 implements ISicInstruction {
 	public static isFormat1(mnemonic: string): boolean {
 		const bc = bytecodeTable[mnemonic];
 		return bc !== undefined && bc.format === 1;
@@ -445,14 +417,14 @@ export class SicFormat1 {
 		if (line.args !== "") {
 			throw new Error("Format 1 arguments cannot have arguments");
 		}
-		this.bc = new SicBytecode(line.op);
+		this.bc = bytecodeTable[line.op];
 	}
 
 	public ready(): boolean {
 		return true;
 	}
 
-	public makeReady(loc: number, tagTab: {[key: string]: number}, litTab: SicLitTab): void {
+	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
 		return;
 	}
 
@@ -465,7 +437,7 @@ export class SicFormat1 {
 	}
 }
 
-export class SicFormat2 {
+export class SicFormat2 implements ISicInstruction {
 	public static isFormat2(mnemonic: string) {
 		const bc = bytecodeTable[mnemonic];
 		return bc !== undefined && bc.format === 2;
@@ -479,7 +451,7 @@ export class SicFormat2 {
 		if (!SicFormat2.isFormat2(line.op)) {
 			throw new Error(line.op + " is not a format 2 opcode");
 		}
-		this.bc = new SicBytecode(line.op);
+		this.bc = bytecodeTable[line.op];
 
 		const s = line.args.trim().split(/\s*,\s*/);
 		if (s.length !== 2) {
@@ -532,7 +504,7 @@ export class SicFormat2 {
 	}
 }
 
-export class SicFormat3 {
+export class SicFormat3 implements ISicInstruction {
 	public static isFormat3(mnemonic: string): boolean {
 		const bc = bytecodeTable[mnemonic];
 		return bc !== undefined && bc.format === 3;
@@ -546,7 +518,7 @@ export class SicFormat3 {
 			throw new Error(line.op + " is not format 3");
 		}
 
-		this.bc = new SicBytecode(line.op);
+		this.bc = bytecodeTable[line.op];
 		this.op = new SicOperandAddr(line.args, SicOpType.f3, tagSet, litSet, baserel);
 	}
 
@@ -574,7 +546,7 @@ export class SicFormat3 {
 	}
 }
 
-export class SicFormatLegacy {
+export class SicFormatLegacy implements ISicInstruction {
 	public static isFormatLegacy(mnemonic: string): boolean {
 		if (mnemonic.charAt(0) !== "*") {
 			return false;
@@ -591,7 +563,7 @@ export class SicFormatLegacy {
 			throw new Error(line.op + " is not SIC legacy format");
 		}
 
-		this.bc = new SicBytecode(line.op);
+		this.bc = bytecodeTable[line.op];
 		this.op = new SicOperandAddr(line.args, SicOpType.legacy, tagList, litList);
 	}
 
@@ -636,7 +608,7 @@ export class SicFormat4 {
 			throw new Error(line.op + " is not format 4");
 		}
 
-		this.bc = new SicBytecode(line.op);
+		this.bc = bytecodeTable[line.op];
 		this.op = new SicOperandAddr(line.args, SicOpType.f4, tagList, litList);
 	}
 
@@ -754,15 +726,26 @@ export class SicSpace {
 
 export class SicLstEntry {
 	public source: string;
-	public bcData: {aloc: number, rloc: number, inst: ISicInstruction | undefined} | undefined;
+	public bcData: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | undefined;
 
-	constructor(source: string, bcData?: {aloc: number, rloc: number, inst: ISicInstruction | undefined}) {
+	constructor(source: string, bcData?: { aloc: number, rloc: number, inst: ISicInstruction | undefined }) {
 		this.source = source;
 		this.bcData = bcData;
 	}
 
-	public byteString(): string{
-		if (this.bcData === undefined || this.bcData.inst === undefined){
+	public hasInstruction(): boolean {
+		return this.bcData !== undefined && this.bcData.inst !== undefined;
+	}
+
+	public byteCode(): number[] {
+		if (!(this.bcData !== undefined && this.bcData.inst !== undefined)) {
+			throw new Error("This SicLstEntry does not have an instruction in it");
+		}
+		return this.bcData.inst.toBytes();
+	}
+
+	public byteString(): string {
+		if (this.bcData === undefined || this.bcData.inst === undefined) {
 			throw new Error("Cannot make a byteString() if there is no instruction.");
 		}
 		return this.bcData.inst.toBytes().reduce((acc: string, val: number) => {
@@ -936,12 +919,12 @@ export class SicCompiler {
 		const directiveOps: { [key: string]: (source: string, split: SicSplit) => SicLstEntry } = {
 			RESW: (source: string, split: SicSplit): SicLstEntry => {
 				this.useTab.inc(3 * parseNum(split.args));
-				return new SicLstEntry(source, {aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined});
+				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
 			},
 
 			RESB: (source: string, split: SicSplit): SicLstEntry => {
 				this.useTab.inc(parseNum(split.args));
-				return new SicLstEntry(source, {aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined});
+				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
 			},
 
 			START: (source: string, split: SicSplit): SicLstEntry => {
@@ -950,14 +933,14 @@ export class SicCompiler {
 				}
 				this.startName = split.tag;
 				this.useTab = new SicUseTab(parseInt(split.args, 16));
-				return new SicLstEntry(source, {aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined});
+				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
 			},
 
 			END: (source: string, split: SicSplit): SicLstEntry => {
 				if (split.args !== this.startName) {
 					throw new Error("END label must be the same as the start label.");
 				}
-				return new SicLstEntry(source, {aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined});
+				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
 			},
 
 			BASE: (source: string, split: SicSplit): SicLstEntry => {
@@ -977,7 +960,7 @@ export class SicCompiler {
 
 			LTORG: (source: string, split: SicSplit): SicLstEntry => {
 				return new SicLstEntry(source,
-					{aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: this.litTab.createOrg(this.useTab.aloc)});
+					{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: this.litTab.createOrg(this.useTab.aloc) });
 			},
 
 			EQU: (source: string, split: SicSplit): SicLstEntry => {
@@ -1001,9 +984,29 @@ export class SicCompiler {
 
 		const isDirective = (val: string) => directiveOps[val] !== undefined;
 
+		// pass 1
 		lines.forEach(val => {
+			// if the line without any comments/whitespace is a blank string
+			if (val.replace(/\..*$/, "").trim() === "") {
+				// continue
+				return;
+			}
+
 			const split = new SicSplit(val);
 			let instr: ISicInstruction;
+
+			// replace * with current loc
+			split.args.replace(/(#|@|=)\*$/, "$1" + this.useTab.aloc.toString(10));
+			// replace strings in equTab
+			for (const key of Object.keys(this.equTab)) {
+				if (split.args.match(key) === null) {
+					continue;
+				}
+				for (let s: string | undefined = this.equTab[key]; s !== undefined; s = this.equTab[s]) {
+					split.args = split.args.replace(key, this.equTab[key]);
+				}
+				break;
+			}
 
 			if (split.tag !== undefined) {
 				this.tagTab[split.tag] = this.useTab.aloc;
@@ -1036,54 +1039,42 @@ export class SicCompiler {
 				throw new Error(split.op + " is not a valid mnemonic.");
 			}
 
-			this.lst.push(new SicLstEntry(val, {aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: instr}));
+			this.lst.push(new SicLstEntry(val, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: instr }));
 			this.useTab.inc(instr.length());
 		});
 
+		// add final ltorg if literals are not in one
 		if (this.litTab.pending.size > 0) {
 			this.lst.push(new SicLstEntry(
-				"", {aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: this.litTab.createOrg(this.useTab.aloc)}));
+				"", { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: this.litTab.createOrg(this.useTab.aloc) }));
 		}
 
+		// pass 2
 		this.lst.forEach(l => {
-			if (l.bcData === undefined || l.bcData.inst === undefined || l.bcData.inst.ready()) {
-				return;
+			if (l.bcData !== undefined && l.bcData.inst !== undefined && l.bcData.inst.ready()) {
+				l.bcData.inst.makeReady(l.bcData.aloc, this.tagTab, this.litTab);
 			}
 		});
-
-		this.lst.forEach(val => {
-			if (val.inst === undefined || val.inst.ready()){
-				return;
-			}
-			val.inst.makeReady(val.aloc, this.tagTab, this.litTab);
-		});
-
-		for (let i = 0, j = 0; i < splits.length; ++i) {
-			if (SicCompiler.isDirective(splits[i].op)) {
-				this.lst.push(new SicLstEntry("", "", splits[i].str.trim()));
-			}
-			else {
-				const l = this.lines[j];
-				let bc = "";
-				l.instr.toBytes().forEach(val => {
-					let c = val.toString(16).toUpperCase();
-					while (c.length < 2) {
-						c = "0" + c;
-					}
-					bc += c;
-				});
-				this.lst.push(new SicLstEntry(l.loc.toString(16).toUpperCase(), bc, l.str.trim()));
-				j++;
-			}
-		}
 	}
 
-	public toLst(): SicLstEntry[] {
-		return this.lst;
+	public lstReport(): string[] {
+		const s = ["n"];
+		s[0] = s[0].padEnd(Math.ceil(Math.log10(this.lst.length)), " ");
+		s[0] += "\taloc \trloc \tbytecode\tsource";
+		s[1] = "".padEnd(Math.ceil(Math.log10(this.lst.length)), " ");
+		s[1] += "\t-----\t-----\t--------\t------";
+
+		return s.concat(this.lst.map(ls => {
+			const astr = ls.bcData === undefined ? "" : ls.bcData.aloc.toString(16).toUpperCase();
+			const rstr = ls.bcData === undefined ? "" : ls.bcData.rloc.toString(16).toUpperCase();
+			const inststr = ls.hasInstruction() ? ls.byteString() : "";
+
+			return astr.padEnd(5, " ") + "\t" + rstr.padEnd(5, " ") + "\t" + inststr.padEnd(8, " ") + "\t" + ls.source;
+		}));
 	}
 
 	public toBytes(): number[][] {
-		return this.lines.map(val => val.instr.toBytes());
+		return this.lst.filter(l => l.hasInstruction()).map(l => l.byteCode());
 	}
 }
 
