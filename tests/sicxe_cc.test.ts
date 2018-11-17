@@ -17,10 +17,10 @@ describe("SicUnsigned tests", () => {
 	});
 
 	it("converts signed values to unsigned correctly", () => {
-		expect(cc.sicMakeUnsigned(0xFF, 8)).to.equal(0xFF);
-		expect(() => cc.sicMakeUnsigned(256, 8)).to.throw();
+		expect(cc.sicMakeUnsigned(0x7F, 8)).to.equal(0x7F);
+		expect(() => cc.sicMakeUnsigned(0x80, 8)).to.throw();
 		expect(cc.sicMakeUnsigned(-0x80, 8)).to.equal(0x80);
-		expect(() => cc.sicMakeUnsigned(-129, 8)).to.throw();
+		expect(() => cc.sicMakeUnsigned(-0x81, 8)).to.throw();
 		expect(cc.sicMakeUnsigned(-0x80, 16)).to.equal(0xFF80);
 	});
 });
@@ -66,6 +66,60 @@ describe("SicSplit tests", () => {
 		expect(ss.tag).to.equal("TAG");
 		expect(ss.op).to.equal("LDA");
 		expect(ss.args).to.equal("VAL");
+	});
+});
+
+describe("SicPending tests", () => {
+	const tagTab: {[key: string]: number} = {
+		VAL: 0x123,
+	};
+
+	const litTab = new cc.SicLitTab();
+	litTab.add(0x123);
+	litTab.createOrg(0x456);
+
+	it("handles tags correctly", () => {
+		const sp = new cc.SicPending("VAL");
+		expect(sp.isTag()).to.equal(true);
+		expect(sp.isLiteral()).to.equal(false);
+		expect(sp.convert(tagTab, litTab)).to.equal(0x123);
+	});
+
+	it("handles literals correctly", () => {
+		const sp = new cc.SicPending(0x123);
+		expect(sp.isTag()).to.equal(false);
+		expect(sp.isLiteral()).to.equal(true);
+		expect(sp.convert(tagTab, litTab)).to.equal(0x456);
+	});
+});
+
+describe("SicBase tests", () => {
+	it("handles straight numbers correctly", () => {
+		const b = new cc.SicBase(0x10);
+		expect(b.ready()).to.equal(true);
+		expect(b.val).to.equal(0x10);
+	});
+
+	it("handles sicpending correctly", () => {
+		const p = new cc.SicPending("VAL");
+		const tagTab: {[key: string]: number} = {
+			VAL: 0x123,
+		};
+		const litTab: {[key: number]: number} = {
+			0x100: 0x200,
+		};
+		const b = new cc.SicBase(p);
+		expect(b.ready()).to.equal(false);
+		b.makeReady(tagTab);
+		expect(b.ready()).to.equal(true);
+		expect(b.val as number).to.equal(0x123);
+	});
+
+	it("handles literals correctly", () => {
+		const p = new cc.SicPending(0x10);
+		const b = new cc.SicBase(p);
+		expect(b.ready()).to.equal(true);
+		expect(b.val as number).to.equal(0x10);
 	});
 });
 
@@ -292,10 +346,10 @@ describe("SicFormat3 tests", () => {
 		f3.makeReady(0x200, tagTab, dummyLitTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x06 - LDX(0x04) + Ni(0x02)
-		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF23
+		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF20
 		// 0x2F - xbPe(0x20) + disp top 4(0x0F)
 		// 0x23 - disp bot 8(0x23)
-		expect(f3.toBytes()).to.equal([0x06, 0x2F, 0x23]);
+		expect(f3.toBytes()).to.equal([0x06, 0x2F, 0x20]);
 	});
 
 	it("handles immediate arguments correctly", () => {
@@ -310,10 +364,10 @@ describe("SicFormat3 tests", () => {
 		f3.makeReady(0x200, tagTab, dummyLitTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x06 - LDX(0x04) + nI(0x01)
-		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF23
+		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF20
 		// 0x2F - xbPe(0x20) + disp top 4(0x0F)
 		// 0x23 - disp bot 8(0x23)
-		expect(f3.toBytes()).to.equal([0x05, 0x2F, 0x23]);
+		expect(f3.toBytes()).to.equal([0x05, 0x2F, 0x20]);
 	});
 
 	it("handles literal arguments correctly", () => {
@@ -367,27 +421,31 @@ describe("SicFormat3 tests", () => {
 	it("handles baserel arguments correctly", () => {
 		const splitFar = new cc.SicSplit("\tLDX X'9FF'");
 		const splitNear = new cc.SicSplit("\tLDX X'200'");
-		const base = new cc.SicBase(0x10);
+		const base = new cc.SicBase(0x300);
 		const f3Far = new cc.SicFormat3(splitFar, tagTest, litTest, base);
 		const f3Near = new cc.SicFormat3(splitNear, tagTest, litTest, base);
 
 		expect(f3Far.length).to.equal(3);
+		expect(f3Far.ready()).to.equal(false);
+		f3Far.makeReady(0x100, tagTab, dummyLitTab);
 		expect(f3Far.ready()).to.equal(true);
 
 		expect(f3Near.length).to.equal(3);
+		expect(f3Near.ready()).to.equal(false);
+		f3Near.makeReady(0x100, tagTab, dummyLitTab);
 		expect(f3Near.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = address(0x9FF) - base(0x10) = 0x9EF
-		// 0x49 - xBpe(0x40) + disp top 4(0x09)
-		// 0xEF - disp bot 8(0xEF)
-		expect(f3Far.toBytes()).to.equal([0x07, 0x49, 0xEF]);
+		//     disp = address(0x9FF) - base(0x300) = 0x6FF
+		// 0x49 - xBpe(0x40) + disp top 4(0x06)
+		// 0xEF - disp bot 8(0xFF)
+		expect(f3Far.toBytes()).to.equal([0x07, 0x46, 0xFF]);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = address(0x200) - base(0x10) = 0x9EF
-		// 0x49 - xbPe(0x20) + disp top 4(0x09)
-		// 0xEF - disp bot 8(0xEF)
-		expect(f3Far.toBytes()).to.equal([0x07, 0x49, 0xEF]);
+		//     disp = address(0x200) - (loc(0x100) + length(0x03)) = 0x0FD
+		// 0x49 - xbPe(0x20) + disp top 4(0x00)
+		// 0xEF - disp bot 8(0xFD)
+		expect(f3Near.toBytes()).to.equal([0x07, 0x20, 0xFD]);
 	});
 
 	it("handles indexed arguments correctly", () => {
@@ -410,14 +468,12 @@ describe("SicFormat3 tests", () => {
 		const splitBad1 = new cc.SicSplit("\t+LDA VAL");
 		const splitBad2 = new cc.SicSplit("\t*LDA VAL");
 		const splitBad3 = new cc.SicSplit("\tLDA A,B");
-		const splitBad4 = new cc.SicSplit("LDA VAL");
-		const splitBad5 = new cc.SicSplit("\tRMO A");
+		const splitBad4 = new cc.SicSplit("\tRMO A");
 
 		expect(() => new cc.SicFormat3(splitBad1, tagTest, litTest)).to.throw();
 		expect(() => new cc.SicFormat3(splitBad2, tagTest, litTest)).to.throw();
 		expect(() => new cc.SicFormat3(splitBad3, tagTest, litTest)).to.throw();
 		expect(() => new cc.SicFormat3(splitBad4, tagTest, litTest)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad5, tagTest, litTest)).to.throw();
 	});
 });
 
@@ -440,11 +496,11 @@ describe("SicFormat4 tests", () => {
 
 		f4.makeReady(0x200, tagTab, dummyLitTab);
 		expect(f4.ready()).to.equal(true);
-		// 0x06 - LDX(0x04) + NI(0x02)
-		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF23
-		// 0x2F - xbPe(0x20) + disp top 4(0x0F)
+		// 0x05 - LDX(0x04) + Ni(0x02)
+		//     disp = address(0x123) = 0x00123
+		// 0x2F - xbpE(0x10) + disp top 4(0x00)
 		// 0x23 - disp bot 8(0x23)
-		expect(f4.toBytes()).to.equal([0x06, 0x2F, 0x23]);
+		expect(f4.toBytes()).to.equal([0x06, 0x10, 0x01, 0x23]);
 	});
 
 	it("handles immediate arguments correctly", () => {
@@ -453,16 +509,17 @@ describe("SicFormat4 tests", () => {
 
 		expect(tagTest.has("VAL")).to.equal(true);
 
-		expect(f4.length).to.equal(3);
+		expect(f4.length).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
 		f4.makeReady(0x200, tagTab, dummyLitTab);
 		expect(f4.ready()).to.equal(true);
-		// 0x06 - LDX(0x04) + nI(0x01)
-		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF23
-		// 0x2F - xbPe(0x20) + disp top 4(0x0F)
+		// 0x05 - LDX(0x04) + nI(0x01)
+		//     disp = address(0x123)
+		// 0x10 - xbpE(0x10) + disp top 4(0x00)
+		// 0x01 - disp mid 8(0x01)
 		// 0x23 - disp bot 8(0x23)
-		expect(f4.toBytes()).to.equal([0x05, 0x2F, 0x23]);
+		expect(f4.toBytes()).to.equal([0x05, 0x10, 0x01, 0x23]);
 	});
 
 	it("handles literal arguments correctly", () => {
@@ -480,63 +537,40 @@ describe("SicFormat4 tests", () => {
 
 		litTab.createOrg(0x2AB);
 
-		expect(ft1.length).to.equal(3);
+		expect(ft1.length).to.equal(4);
 		expect(ft1.ready()).to.equal(false);
-		expect(ft2.length).to.equal(3);
+		expect(ft2.length).to.equal(4);
 		expect(ft2.ready()).to.equal(false);
-		expect(ft3.length).to.equal(3);
+		expect(ft3.length).to.equal(4);
 		expect(ft3.ready()).to.equal(false);
 
 		ft1.makeReady(0x100, tagTab, litTab);
 		expect(ft1.ready()).to.equal(true);
-		ft2.makeReady(0x103, tagTab, litTab);
+		ft2.makeReady(0x104, tagTab, litTab);
 		expect(ft2.ready()).to.equal(true);
-		ft3.makeReady(0x106, tagTab, litTab);
+		ft3.makeReady(0x108, tagTab, litTab);
 		expect(ft3.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = location(0x2AB) - (loc(0x100) + length(0x03)) = 0x1A8
-		// 0x21 - xbPe(0x20) + disp top 4(0x01)
-		// 0xA8 - disp bot 8(0xA8)
-		expect(ft1.toBytes()).to.equal([0x07, 0x21, 0xA8]);
+		//     disp = location(0x2AB) = 0x002AB
+		// 0x21 - xbpE(0x01) + disp top 4(0x00)
+		// 0xA8 - disp mid 8(0x02)
+		// 0xAB - disp bot 8(0xAB)
+		expect(ft1.toBytes()).to.equal([0x07, 0x10, 0x02, 0xAB]);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = location(0x2AE) - (loc(0x103) + length(0x03)) = 0x1A8
-		// 0x21 - xbPe(0x20) + disp top 4(0x01)
-		// 0xA8 - disp bot 8(0xA8)
-		expect(ft2.toBytes()).to.equal([0x07, 0x21, 0xA8]);
+		//     disp = location(0x2AB) = 0x002AE
+		// 0x21 - xbpE(0x01) + disp top 4(0x00)
+		// 0xA8 - disp mid 8(0x02)
+		// 0xAE - disp bot 8(0xAE)
+		expect(ft2.toBytes()).to.equal([0x07, 0x10, 0x02, 0xAE]);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = location(0x2AB) - (loc(0x106) + length(0x03)) = 0x1A2
-		// 0x21 - xbPe(0x20) + disp top 4(0x01)
-		// 0xA2 - disp bot 8(0xA2)
-		expect(ft3.toBytes()).to.equal([0x07, 0x21, 0xA2]);
-	});
-
-	it("handles baserel arguments correctly", () => {
-		const splitFar = new cc.SicSplit("\tLDX X'9FF'");
-		const splitNear = new cc.SicSplit("\tLDX X'200'");
-		const base = new cc.SicBase(0x10);
-		const f4Far = new cc.SicFormat4(splitFar, tagTest, litTest);
-		const f4Near = new cc.SicFormat4(splitNear, tagTest, litTest, base);
-
-		expect(f4Far.length).to.equal(3);
-		expect(f4Far.ready()).to.equal(true);
-
-		expect(f4Near.length).to.equal(3);
-		expect(f4Near.ready()).to.equal(true);
-
-		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = address(0x9FF) - base(0x10) = 0x9EF
-		// 0x49 - xBpe(0x40) + disp top 4(0x09)
-		// 0xEF - disp bot 8(0xEF)
-		expect(f4Far.toBytes()).to.equal([0x07, 0x49, 0xEF]);
-
-		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = address(0x9FF) - base(0x10) = 0x9EF
-		// 0x49 - xbPe(0x20) + disp top 4(0x09)
-		// 0xEF - disp bot 8(0xEF)
-		expect(f4Far.toBytes()).to.equal([0x07, 0x49, 0xEF]);
+		//     disp = location(0x2AB) = 0x002B1
+		// 0x21 - xbpE(0x01) + disp top 4(0x00)
+		// 0xA8 - disp mid 8(0x02)
+		// 0xB1 - disp bot 8(0xB1)
+		expect(ft3.toBytes()).to.equal([0x07, 0x10, 0x02, 0xB1]);
 	});
 
 	it("handles indexed arguments correctly", () => {
@@ -549,41 +583,28 @@ describe("SicFormat4 tests", () => {
 		f4.makeReady(0x50, tagTab, dummyLitTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = address(0x123) - (loc(0x50) + len(0x03)) = 0x0D0
-		// 0xA0 - XbPe(0xA0) + disp top 4(0x00)
-		// 0xD0 - disp bot 8(0xD0)
-		expect(f4.toBytes()).to.equal([0x07, 0xA0, 0xD0]);
+		//     disp = address(0x123) = 0x00123
+		// 0x90 - XbpE(0x90) + disp top 4(0x00)
+		// 0x01 - disp mid 8(0x01)
+		// 0x23 - disp bot 8(0x23)
+		expect(f4.toBytes()).to.equal([0x07, 0x90, 0x01, 0x23]);
 	});
 
 	it("throws on invalid arguments", () => {
-		const splitBad1 = new cc.SicSplit("\t+LDA VAL");
+		const splitBad1 = new cc.SicSplit("\tLDA VAL");
 		const splitBad2 = new cc.SicSplit("\t*LDA VAL");
-		const splitBad3 = new cc.SicSplit("\tLDA A,B");
-		const splitBad4 = new cc.SicSplit("LDA VAL");
-		const splitBad5 = new cc.SicSplit("\tRMO A");
+		const splitBad3 = new cc.SicSplit("\t+LDA A,B");
+		const splitBad4 = new cc.SicSplit("\t+RMO A");
 
 		expect(() => new cc.SicFormat4(splitBad1, tagTest, litTest)).to.throw();
 		expect(() => new cc.SicFormat4(splitBad2, tagTest, litTest)).to.throw();
 		expect(() => new cc.SicFormat4(splitBad3, tagTest, litTest)).to.throw();
 		expect(() => new cc.SicFormat4(splitBad4, tagTest, litTest)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad5, tagTest, litTest)).to.throw();
 	});
 });
 
 describe("SicSpace tests", () => {
-	it("RESW/RESB test", () => {
-		const splitRESW = new cc.SicSplit("\tRESW 2");
-		const splitRESB = new cc.SicSplit("\tRESB X'03'");
-		const sw = new cc.SicSpace(splitRESW);
-		const sb = new cc.SicSpace(splitRESB);
-
-		expect(sw.length()).to.equal(6);
-		expect(sw.toBytes()).to.equal([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-		expect(sb.length()).to.equal(0x3);
-		expect(sb.toBytes()).to.equal([0xFF, 0xFF, 0xFF]);
-	});
-
-	it("WORD/BYTE test", () => {
+	it("handles WORD/BYTE correctly", () => {
 		const splitWORD = new cc.SicSplit("\tWORD X'ABCD12'");
 		const splitBYTE = new cc.SicSplit("\tBYTE 12");
 		const w = new cc.SicSpace(splitWORD);
@@ -595,10 +616,10 @@ describe("SicSpace tests", () => {
 		expect(b.toBytes()).to.equal([12]);
 	});
 
-	it("space fail tests", () => {
+	it("throws on invalid arguments", () => {
 		const splitFail1 = new cc.SicSplit("\tLDA 4");
 		const splitFail2 = new cc.SicSplit("\tWORD");
-		const splitFail3 = new cc.SicSplit("\tRESW 1,2");
+		const splitFail3 = new cc.SicSplit("\tBYTE 1,2");
 
 		expect(() => new cc.SicSpace(splitFail1)).to.throw();
 		expect(() => new cc.SicSpace(splitFail2)).to.throw();
@@ -606,20 +627,65 @@ describe("SicSpace tests", () => {
 	});
 });
 
-describe("pass1 tests", () => {
+describe("SicCompiler tests", () => {
 	const lines = [
-		"TEST\tSTART\tA",
-		"\tLDA #4",
-		"ACTION\tRMO B, A",
+		"TEST START 100",
+		"\tLDA @4",
+		"\tLDB =4",
+		"\tLDT #4",
+		"\tLDX 4",
+		"\tLDS =X'ABC',X",
+		"VAL EQU X'ABC'",
+		"\tUSE FOO",
+		"\t+STA =4",
+		"\tSTB #ACTION",
+		"\tSTT ACTION",
+		"\t+STX @ACTION,X",
+		"\tSTS #VAL",
+		"\tUSE",
+		"\tLTORG",
+		"ACTION RMO B, A",
 		"\tFIX",
-		"\t+LDS #X'ABCDE'",
-		"NUMBER\tRESW 5",
-		"\tSTA NUMBER",
+		"\t+LDS =4",
+		"WORDN WORD X'ABC'",
+		"HUGE RESW 1000",
+		"WORDB BYTE C'EOF'",
+		"\tBASE VAL",
+		"\tLDA ACTION",
+		"\tNOBASE",
+		"\tLDA ACTION",
 		"\tEND TEST",
+	];
+	const lstExpect = [
+		"n    \taloc \trloc \tbytecode\tsource",
+		"-----\t-----\t-----\t--------\t------",
+		"     \t     \t     \t        \tTEST\tSTART\t100",
+		"00001\t100  \t100  \t020004  \t\tLDA @4",
+		"00002\t103  \t103  \t01      \t\tLDB =4",
+		"00003\t106  \t106  \t750004  \t\tLDT #4",
+		"00004\t109  \t109  \t070004  \t\tLDX 4",
+		"00005\t10C  \t10C  \t        \t\tLDS =X'ABC',X",
+		"     \t     \t     \t        \tVAL\tEQU\tX'ABC'",
+		"     \t     \t     \t        \t\tUSE FOO",
+		"00006\t10F  \t100  \t0E1     \t\t+STA =4",
+		"00007\t113  \t104  \t        \t\tSTB #ACTION",
+		"00008\t116  \t107  \t        \t\tSTT ACTION",
+		"00009\t119  \t10A  \t        \t\t+STX @ACTION,X",
+		"0000A\t11D  \t10E  \t        \t\tSTS #VAL",
+		"     \t     \t     \t        \t\tUSE",
+		"     \t     \t     \t        \t\tLTORG",
+		"0000B\t120  \t10F  \t        \tACTION RMO B,A",
+		"     \t     \t     \t        \tHUGE RESW 1000",
+		"0000C\t122  \t111  \t        \tWORDB BYTE C'EOF'",
+		"     \t     \t     \t        \t\tBASE VAL",
+		"0000D\t125  \t114  \t        \t\tLDA ACTION",
+		"     \t     \t     \t        \t\tNOBASE",
+		"0000E\t128  \t117  \t        \t\tLDA ACTION",
+		"     \t131  \t11A  \t        \t\tEND TEST",
 	];
 	const p1 = new cc.SicCompiler(lines);
 
-	it("loc test", () => {
+	it("does the thing", () => {
 		expect(p1.lines.length).to.equal(6);
 		//        LDA #4
 		expect(p1.lines[0].loc).to.equal(0xA);

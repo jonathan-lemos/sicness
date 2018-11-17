@@ -5,6 +5,8 @@
  * of the MIT license.  See the LICENSE file for details.
 */
 
+// TODO: expression parser
+
 // comments are for suckers
 // if it was hard to write it should be hard to read
 
@@ -23,8 +25,9 @@ export const sicCheckUnsigned = (val: number, nBits: number): void => {
 };
 
 export const sicMakeUnsigned = (val: number, nBits: number): number => {
-	if (val < -sicMakeMask(nBits - 1) - 1 || val > sicMakeMask(nBits)) {
-		throw new Error(val + " does not fit in an " + nBits + "-bit range");
+	const m = sicMakeMask(nBits - 1);
+	if (val < -m - 1 || val > m) {
+		throw new Error(val + " does not fit in a signed " + nBits + "-bit range");
 	}
 
 	val >>>= 0;
@@ -213,6 +216,7 @@ export class SicOperandAddr {
 	public indexed: boolean;
 	public base: SicBase | undefined;
 	public pcrel: boolean;
+	private rdy: boolean;
 
 	constructor(arg: string, type: SicOpType, tagList: Set<string>, litList: Set<number>, baserel?: SicBase) {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
@@ -251,6 +255,7 @@ export class SicOperandAddr {
 			}
 			this.addr = getType(match[1]);
 			this.indexed = match[3] !== null;
+			this.pcrel = false;
 		}
 		else if ((match = arg.match(reHex)) !== null) {
 			const x = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
@@ -263,6 +268,7 @@ export class SicOperandAddr {
 			}
 			this.addr = getType(match[1]);
 			this.indexed = match[3] !== null;
+			this.pcrel = false;
 		}
 		else if ((match = arg.match(reChar)) !== null) {
 			const x = match[2].charCodeAt(0);
@@ -275,6 +281,7 @@ export class SicOperandAddr {
 			}
 			this.addr = getType(match[1]);
 			this.indexed = match[3] !== null;
+			this.pcrel = false;
 		}
 		else if ((match = arg.match(reTag)) != null) {
 			this.val = new SicPending(match[2]);
@@ -292,16 +299,19 @@ export class SicOperandAddr {
 		if (this.addr !== SicOpAddrType.direct && this.type === SicOpType.legacy) {
 			throw new Error("SIC Legacy instructions can only use direct addressing");
 		}
+
+		this.rdy = !this.pcrel &&
+			typeof this.val === "number" &&
+			(this.base === undefined || this.base.ready());
+
 	}
 
 	public ready(): boolean {
-		return !this.pcrel &&
-			typeof this.val === "number" &&
-			(this.base === undefined || this.base.ready());
+		return this.rdy;
 	}
 
 	public makeReady(pc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
-		if (typeof this.val === "number") {
+		if (this.rdy) {
 			return;
 		}
 
@@ -309,7 +319,9 @@ export class SicOperandAddr {
 			(this.base as SicBase).makeReady(tagTab);
 		}
 
-		this.val = this.val.convert(tagTab, litTab);
+		if (typeof this.val !== "number") {
+			this.val = (this.val as SicPending).convert(tagTab, litTab);
+		}
 
 		let maxAddr: number;
 		switch (this.type) {
@@ -329,6 +341,7 @@ export class SicOperandAddr {
 		if (this.pcrel) {
 			try {
 				this.val = sicMakeUnsigned(this.val - pc, maxAddr);
+				this.rdy = true;
 				return;
 			}
 			catch (e) {
@@ -338,6 +351,7 @@ export class SicOperandAddr {
 		if (this.base) {
 			try {
 				this.val = sicMakeUnsigned(this.val - (this.base.val as number), maxAddr);
+				this.rdy = true;
 				return;
 			}
 			catch (e) {
@@ -345,6 +359,7 @@ export class SicOperandAddr {
 			}
 		}
 		sicCheckUnsigned(this.val, maxAddr);
+		this.rdy = true;
 	}
 
 	public nixbpe(): number[] {
@@ -591,7 +606,7 @@ export class SicFormatLegacy implements ISicInstruction {
 	}
 }
 
-export class SicFormat4 {
+export class SicFormat4 implements ISicInstruction {
 	public static isFormat4(mnemonic: string): boolean {
 		if (mnemonic.charAt(0) !== "+") {
 			return false;
@@ -637,7 +652,7 @@ export class SicFormat4 {
 	}
 }
 
-export class SicSpace {
+export class SicSpace implements ISicInstruction {
 	public static isSpace(mnemonic: string): boolean {
 		const re = new RegExp("^(WORD|BYTE)$");
 		return re.test(mnemonic);
@@ -1059,17 +1074,15 @@ export class SicCompiler {
 
 	public lstReport(): string[] {
 		const s = ["n"];
-		s[0] = s[0].padEnd(Math.ceil(Math.log10(this.lst.length)), " ");
-		s[0] += "\taloc \trloc \tbytecode\tsource";
-		s[1] = "".padEnd(Math.ceil(Math.log10(this.lst.length)), " ");
-		s[1] += "\t-----\t-----\t--------\t------";
+		s[0] = "n    \taloc \trloc \tbytecode\tsource";
+		s[1] = "-----\t-----\t-----\t--------\t------";
 
 		return s.concat(this.lst.map(ls => {
 			const astr = ls.bcData === undefined ? "" : ls.bcData.aloc.toString(16).toUpperCase();
 			const rstr = ls.bcData === undefined ? "" : ls.bcData.rloc.toString(16).toUpperCase();
 			const inststr = ls.hasInstruction() ? ls.byteString() : "";
 
-			return astr.padEnd(5, " ") + "\t" + rstr.padEnd(5, " ") + "\t" + inststr.padEnd(8, " ") + "\t" + ls.source;
+			return astr.padStart(5, "0") + "\t" + rstr.padEnd(5, " ") + "\t" + inststr.padEnd(8, " ") + "\t" + ls.source;
 		}));
 	}
 
