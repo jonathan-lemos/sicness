@@ -20,14 +20,14 @@ export const sicMakeMask = (nBits: number): number => {
 
 export const sicCheckUnsigned = (val: number, nBits: number): void => {
 	if (val < 0x0 || val > sicMakeMask(nBits)) {
-		throw new Error(val.toString(16) + " does not fit in an unsigned " + nBits + "-bit range");
+		throw new Error(val.toString(16).toUpperCase() + " does not fit in an unsigned " + nBits + "-bit range");
 	}
 };
 
 export const sicMakeUnsigned = (val: number, nBits: number): number => {
 	const m = sicMakeMask(nBits - 1);
 	if (val < -m - 1 || val > m) {
-		throw new Error(val + " does not fit in a signed " + nBits + "-bit range");
+		throw new Error(val.toString(16).toUpperCase() + " does not fit in a signed " + nBits + "-bit range");
 	}
 
 	val >>>= 0;
@@ -218,12 +218,11 @@ export class SicOperandAddr {
 	public pcrel: boolean;
 	private rdy: boolean;
 
-	constructor(arg: string, type: SicOpType, tagList: Set<string>, litList: Set<number>, baserel?: SicBase) {
+	constructor(arg: string, type: SicOpType, litList: Set<number>, baserel?: SicBase) {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
 		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
 		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
-		const operandLen = 12;
 
 		const getType = (char: string): SicOpAddrType => {
 			switch (char) {
@@ -237,7 +236,7 @@ export class SicOperandAddr {
 			}
 		};
 
-		const isLiteral = (c: string): boolean => c.charAt(0) === "=";
+		const isLiteral = (c: string): boolean => c !== undefined && c.charAt(0) === "=";
 
 		this.type = type;
 		this.base = this.type === SicOpType.f3 ? baserel : undefined;
@@ -245,30 +244,30 @@ export class SicOperandAddr {
 
 		let match: RegExpMatchArray | null;
 		if ((match = arg.match(reDecimal)) !== null) {
-			const x = sicMakeUnsigned(parseInt(match[2], 10), operandLen);
+			const x = parseInt(match[2], 10);
 			if (isLiteral(match[1])) {
 				litList.add(x);
 				this.val = new SicPending(x);
 			}
 			else{
 				this.val = x;
+				this.pcrel = false;
 			}
 			this.addr = getType(match[1]);
-			this.indexed = match[3] !== null;
-			this.pcrel = false;
+			this.indexed = match[3] != null;
 		}
 		else if ((match = arg.match(reHex)) !== null) {
-			const x = sicMakeUnsigned(parseInt(match[2], 16), operandLen);
+			const x = parseInt(match[2], 16);
 			if (isLiteral(match[1])) {
 				litList.add(x);
 				this.val = new SicPending(x);
 			}
-			else{
+			else {
 				this.val = x;
+				this.pcrel = false;
 			}
 			this.addr = getType(match[1]);
-			this.indexed = match[3] !== null;
-			this.pcrel = false;
+			this.indexed = match[3] != null;
 		}
 		else if ((match = arg.match(reChar)) !== null) {
 			const x = match[2].charCodeAt(0);
@@ -276,21 +275,17 @@ export class SicOperandAddr {
 				litList.add(x);
 				this.val = new SicPending(x);
 			}
-			else{
+			else {
 				this.val = x;
+				this.pcrel = false;
 			}
 			this.addr = getType(match[1]);
-			this.indexed = match[3] !== null;
-			this.pcrel = false;
+			this.indexed = match[3] != null;
 		}
 		else if ((match = arg.match(reTag)) != null) {
 			this.val = new SicPending(match[2]);
-			if (tagList.has(match[2])) {
-				throw new Error(this.val + " was already used as a label.");
-			}
-			tagList.add(match[2]);
 			this.addr = getType(match[1]);
-			this.indexed = match[3] !== null;
+			this.indexed = match[3] != null;
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
@@ -301,9 +296,8 @@ export class SicOperandAddr {
 		}
 
 		this.rdy = !this.pcrel &&
-			typeof this.val === "number" &&
-			(this.base === undefined || this.base.ready());
-
+			this.base === undefined &&
+			typeof this.val === "number";
 	}
 
 	public ready(): boolean {
@@ -315,8 +309,8 @@ export class SicOperandAddr {
 			return;
 		}
 
-		if (this.base !== undefined) {
-			(this.base as SicBase).makeReady(tagTab);
+		if (this.base !== undefined && !this.base.ready()) {
+			this.base.makeReady(tagTab);
 		}
 
 		if (typeof this.val !== "number") {
@@ -528,13 +522,13 @@ export class SicFormat3 implements ISicInstruction {
 	public bc: SicBytecode;
 	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, tagSet: Set<string>, litSet: Set<number>, baserel?: SicBase) {
+	constructor(line: SicSplit, litSet: Set<number>, baserel?: SicBase) {
 		if (!SicFormat3.isFormat3(line.op)) {
 			throw new Error(line.op + " is not format 3");
 		}
 
 		this.bc = bytecodeTable[line.op];
-		this.op = new SicOperandAddr(line.args, SicOpType.f3, tagSet, litSet, baserel);
+		this.op = new SicOperandAddr(line.args, SicOpType.f3, litSet, baserel);
 	}
 
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
@@ -573,13 +567,13 @@ export class SicFormatLegacy implements ISicInstruction {
 	public bc: SicBytecode;
 	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, tagList: Set<string>, litList: Set<number>) {
+	constructor(line: SicSplit, litList: Set<number>) {
 		if (!SicFormatLegacy.isFormatLegacy(line.op)) {
 			throw new Error(line.op + " is not SIC legacy format");
 		}
 
 		this.bc = bytecodeTable[line.op];
-		this.op = new SicOperandAddr(line.args, SicOpType.legacy, tagList, litList);
+		this.op = new SicOperandAddr(line.args, SicOpType.legacy, litList);
 	}
 
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
@@ -618,13 +612,13 @@ export class SicFormat4 implements ISicInstruction {
 	public bc: SicBytecode;
 	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, tagList: Set<string>, litList: Set<number>) {
+	constructor(line: SicSplit, litList: Set<number>) {
 		if (!SicFormat4.isFormat4(line.op)) {
 			throw new Error(line.op + " is not format 4");
 		}
 
-		this.bc = bytecodeTable[line.op];
-		this.op = new SicOperandAddr(line.args, SicOpType.f4, tagList, litList);
+		this.bc = bytecodeTable[line.op.slice(1)];
+		this.op = new SicOperandAddr(line.args, SicOpType.f4, litList);
 	}
 
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
@@ -715,7 +709,7 @@ export class SicSpace implements ISicInstruction {
 	public length(): number {
 		switch (this.mnemonic) {
 			case "WORD":
-				return this.arg.length + this.arg.length % 3 ? 1 : 0;
+				return this.arg.length + (this.arg.length % 3 !== 0 ? 1 : 0);
 			case "BYTE":
 				return this.arg.length;
 			default:
@@ -746,9 +740,9 @@ export class SicLstEntry {
 
 	constructor(source: string, bcData?: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | string) {
 		this.source = source;
-		if (typeof bcData === "string"){
-			this.errmsg = bcData;
+		if (typeof bcData === "string") {
 			this.bcData = undefined;
+			this.errmsg = bcData;
 		}
 		else {
 			this.bcData = bcData;
@@ -870,8 +864,6 @@ export class SicCompiler {
 		this.useTab = new SicUseTab(0);
 		this.litTab = new SicLitTab();
 
-		const tagList = new Set<string>();
-
 		const parseNum = (val: string): number => {
 			const reDec = new RegExp("^(\\d+)$");
 			const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
@@ -940,8 +932,8 @@ export class SicCompiler {
 				this.lst.push(new SicLstEntry(source));
 				const l = this.litTab.createOrg(this.useTab.aloc);
 				l.forEach(v => {
-					this.lst.push(new SicLstEntry("LTORG-BYTE '" + v.val.toString(16).toUpperCase + "'",
-					{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+					this.lst.push(new SicLstEntry("LTORG-WORD X'" + v.val.toString(16).toUpperCase() + "'",
+						{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 					this.useTab.inc(3);
 				});
 			},
@@ -969,76 +961,84 @@ export class SicCompiler {
 
 		// pass 1
 		lines.forEach(val => {
-			// if the line without any comments/whitespace is a blank string
-			if (val.replace(/\..*$/, "").trim() === "") {
-				// continue
-				return;
-			}
-
-			const split = new SicSplit(val);
-			let instr: ISicInstruction;
-
-			// replace * with current loc
-			split.args.replace(/(#|@|=)\*$/, "$1" + this.useTab.aloc.toString(10));
-			// replace strings in equTab
-			for (const key of Object.keys(this.equTab)) {
-				if (split.args.match(key) === null) {
-					continue;
+			try {
+				// if the line without any comments/whitespace is a blank string
+				if (val.replace(/\..*$/, "").trim() === "") {
+					// continue
+					return;
 				}
-				for (let s: string | undefined = this.equTab[key]; s !== undefined; s = this.equTab[s]) {
-					split.args = split.args.replace(key, this.equTab[key]);
+
+				const split = new SicSplit(val);
+				let instr: ISicInstruction;
+
+				// replace * with current loc
+				split.args.replace(/(#|@|=)\*$/, "$1" + this.useTab.aloc.toString(10));
+				// replace strings in equTab
+				for (const key of Object.keys(this.equTab)) {
+					if (split.args.match(key) === null) {
+						continue;
+					}
+					for (let s: string | undefined = this.equTab[key]; s !== undefined; s = this.equTab[s]) {
+						split.args = split.args.replace(key, this.equTab[key]);
+					}
+					break;
 				}
-				break;
-			}
 
-			if (split.tag !== undefined) {
-				this.tagTab[split.tag] = this.useTab.aloc;
-			}
+				if (split.tag !== undefined) {
+					this.tagTab[split.tag] = this.useTab.aloc;
+				}
 
-			if (isDirective(split.op)) {
-				directiveOps[split.op](val, split);
-				return;
-			}
+				if (isDirective(split.op)) {
+					directiveOps[split.op](val, split);
+					return;
+				}
 
-			if (SicFormat1.isFormat1(split.op)) {
-				instr = new SicFormat1(split);
-			}
-			else if (SicFormat2.isFormat2(split.op)) {
-				instr = new SicFormat2(split);
-			}
-			else if (SicFormat3.isFormat3(split.op)) {
-				instr = new SicFormat3(split, tagList, this.litTab.pending, baserel);
-			}
-			else if (SicFormat4.isFormat4(split.op)) {
-				instr = new SicFormat4(split, tagList, this.litTab.pending);
-			}
-			else if (SicFormatLegacy.isFormatLegacy(split.op)) {
-				instr = new SicFormatLegacy(split, tagList, this.litTab.pending);
-			}
-			else if (SicSpace.isSpace(split.op)) {
-				instr = new SicSpace(split);
-			}
-			else {
-				throw new Error(split.op + " is not a valid mnemonic.");
-			}
+				if (SicFormat1.isFormat1(split.op)) {
+					instr = new SicFormat1(split);
+				}
+				else if (SicFormat2.isFormat2(split.op)) {
+					instr = new SicFormat2(split);
+				}
+				else if (SicFormat3.isFormat3(split.op)) {
+					instr = new SicFormat3(split, this.litTab.pending, baserel);
+				}
+				else if (SicFormat4.isFormat4(split.op)) {
+					instr = new SicFormat4(split, this.litTab.pending);
+				}
+				else if (SicFormatLegacy.isFormatLegacy(split.op)) {
+					instr = new SicFormatLegacy(split, this.litTab.pending);
+				}
+				else if (SicSpace.isSpace(split.op)) {
+					instr = new SicSpace(split);
+				}
+				else {
+					throw new Error(split.op + " is not a valid mnemonic.");
+				}
 
-			this.lst.push(new SicLstEntry(val, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: instr }));
-			this.useTab.inc(instr.length());
+				this.lst.push(new SicLstEntry(val, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: instr }));
+				this.useTab.inc(instr.length());
+			}
+			catch (e) {
+				this.lst.push(new SicLstEntry(val, (e as Error).message));
+			}
 		});
 
 		// add final ltorg if literals are not in one
 		if (this.litTab.pending.size > 0) {
 			const l = this.litTab.createOrg(this.useTab.aloc);
 			l.forEach(v => {
-				this.lst.push(new SicLstEntry("LTORG-WORD X'" + v.val.toString(16).toUpperCase + "'",
-					{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
-				this.useTab.inc(3);
+				if (this.litTab.getLitLoc(v.val) === null) {
+					this.lst.push(new SicLstEntry("LTORG-WORD X'" + v.val.toString(16).toUpperCase() + "'",
+						{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+					this.useTab.inc(3);
+				}
 			});
+			this.litTab.pending = new Set<number>();
 		}
 
 		// pass 2
 		this.lst.forEach(l => {
-			if (l.bcData !== undefined && l.bcData.inst !== undefined && l.bcData.inst.ready()) {
+			if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
 				l.bcData.inst.makeReady(l.bcData.aloc, this.tagTab, this.litTab);
 			}
 		});
@@ -1048,13 +1048,20 @@ export class SicCompiler {
 		const s = ["n"];
 		s[0] = "n    \taloc \trloc \tbytecode\tsource";
 		s[1] = "-----\t-----\t-----\t--------\t------";
+		let i = 1;
 
 		return s.concat(this.lst.map(ls => {
 			const astr = ls.bcData === undefined ? "" : ls.bcData.aloc.toString(16).toUpperCase();
 			const rstr = ls.bcData === undefined ? "" : ls.bcData.rloc.toString(16).toUpperCase();
 			const inststr = ls.hasInstruction() ? ls.byteString() : "";
+			const istr = i.toString(16).toUpperCase();
+			++i;
 
-			return astr.padStart(5, "0") + "\t" + rstr.padEnd(5, " ") + "\t" + inststr.padEnd(8, " ") + "\t" + ls.source;
+			return istr.padEnd(5, " ") + "\t" +
+				astr.padEnd(5, " ") + "\t" +
+				rstr.padEnd(5, " ") + "\t" +
+				inststr.padEnd(8, " ") + "\t" +
+				ls.source;
 		}));
 	}
 

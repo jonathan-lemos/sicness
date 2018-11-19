@@ -15,23 +15,21 @@ var gulp        = require("gulp");
 
 var tsProject = tsc.createProject("tsconfig.json");
 
+gulp.task("default", function() {
+    return gulp.src([
+        "src/*.ts",
+    ])
+        .pipe(tsProject())
+        .js.pipe(gulp.dest("dist"));
+});
+
 gulp.task("lint", function() {
     return gulp.src([
         "src/**/*.ts",
         "tests/**/*.ts"
     ])
-    .pipe(tslint({}))
-    .pipe(tslint.report("verbose"));
-});
-
-gulp.task("build-app", function() {
-    return gulp.src([
-        "src/**/**.ts",
-        "typings/main.d.ts/",
-        "src/interfaces/interfaces.d.ts"
-    ])
-    .pipe(tsc(tsProject))
-    .js.pipe(gulp.dest("src/"));
+        .pipe(tslint({}))
+        .pipe(tslint.report("verbose"));
 });
 
 gulp.task("bundle", function() {
@@ -66,24 +64,23 @@ gulp.task("bundle", function() {
 //}));
 
 var tsTestProject = tsc.createProject("tsconfig.json");
+
 gulp.task("build-test", function() {
     return gulp.src([
-        "tests/**/*.ts",
-        "typings/main.d.ts/",
-        "src/interfaces/interfaces.d.ts"
+        "tests/*.ts",
     ])
-    .pipe(tsc(testTestProject))
-    .js.pipe(gulp.dest("tests/"));
+        .pipe(tsTestProject())
+        .js.pipe(gulp.dest("dist"));
 });
 
 gulp.task("istanbul:hook", function() {
-    return gulp.src(["src/**/*.js"])
+    return gulp.src(["dist/*.js"])
         .pipe(istanbul())
         .pipe(istanbul.hookRequire());
 });
 
-gulp.task("test", gulp.series("istanbul:hook", function() {
-    return gulp.src("tests/**/*.test.js")
-        .pipe(mocha({ui: "bdd"}))
+gulp.task("test", gulp.series("build-test", "istanbul:hook", function() {
+    return gulp.src("dist/*.test.js")
+        .pipe(mocha({ ui: "bdd" }))
         .pipe(istanbul.writeReports());
 }));
