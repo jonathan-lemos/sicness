@@ -742,10 +742,18 @@ export class SicSpace implements ISicInstruction {
 export class SicLstEntry {
 	public source: string;
 	public bcData: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | undefined;
+	public errmsg: string | undefined;
 
-	constructor(source: string, bcData?: { aloc: number, rloc: number, inst: ISicInstruction | undefined }) {
+	constructor(source: string, bcData?: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | string) {
 		this.source = source;
-		this.bcData = bcData;
+		if (typeof bcData === "string"){
+			this.errmsg = bcData;
+			this.bcData = undefined;
+		}
+		else {
+			this.bcData = bcData;
+			this.errmsg = undefined;
+		}
 	}
 
 	public hasInstruction(): boolean {
@@ -770,7 +778,7 @@ export class SicLstEntry {
 }
 
 export class SicLitTab {
-	public ltorgs: SicLtorg[];
+	public ltorgs: Array<{ loc: number, val: number }>;
 	public pending: Set<number>;
 
 	constructor() {
@@ -782,73 +790,28 @@ export class SicLitTab {
 		let diffMin = Number.MAX_SAFE_INTEGER;
 		let loc: number | null = null;
 		this.ltorgs.forEach(lt => {
-			let v: number;
-			try {
-				v = lt.getLoc(n);
-			}
-			catch (e) {
-				return;
-			}
-
-			if (diffMin > Math.min(v - pc, v)) {
-				diffMin = Math.min(v - pc, v);
-				loc = v;
+			if (lt.val === n && diffMin > Math.min(lt.loc - pc, lt.loc)) {
+				diffMin = Math.min(lt.loc - pc, lt.loc);
+				loc = lt.loc;
 			}
 		});
 		return loc;
 	}
 
-	public createOrg(loc: number): SicLtorg {
-		const ltorg = new SicLtorg(loc, this.pending);
+	public createOrg(loc: number): Array<{ loc: number, val: number }> {
+		let l = loc;
+		const m: Array<{ loc: number, val: number }> = [];
+		const lt = this.pending.forEach(v => {
+			m.push({ loc: l, val: v });
+			l += 3;
+		});
+		this.ltorgs = this.ltorgs.concat(m);
 		this.pending = new Set<number>();
-		this.ltorgs.push(ltorg);
-		return ltorg;
+		return m;
 	}
 
 	public add(n: number): void {
 		this.pending.add(n);
-	}
-}
-
-export class SicLtorg {
-	public loc: number;
-	public vals: number[];
-
-	constructor(loc: number, vals: Set<number>) {
-		this.loc = loc;
-		this.vals = [];
-		vals.forEach(v => this.vals.push(v));
-	}
-
-	public includes(n: number): boolean {
-		return this.vals.includes(n);
-	}
-
-	public getLoc(n: number): number {
-		for (let i = 0; i < this.vals.length; ++i) {
-			if (this.vals[i] === n) {
-				return this.loc + 3 * i;
-			}
-		}
-		throw new Error(n + " was not found in this LTORG");
-	}
-
-	public ready(): boolean {
-		return true;
-	}
-
-	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
-		return;
-	}
-
-	public length(): number {
-		return 3 * Object.keys(this.vals).length;
-	}
-
-	public toBytes(): number[] {
-		const s: number[] = [];
-		Object.values(this.vals).forEach(n => s.concat([(n & 0xFF0000) >>> 16, (n & 0xFF00) >>> 8, (n & 0xFF)]));
-		return s;
 	}
 }
 
@@ -931,54 +894,59 @@ export class SicCompiler {
 			throw new Error(val + " was not of a valid numeric format.");
 		};
 
-		const directiveOps: { [key: string]: (source: string, split: SicSplit) => SicLstEntry } = {
-			RESW: (source: string, split: SicSplit): SicLstEntry => {
+		const directiveOps: { [key: string]: (source: string, split: SicSplit) => void } = {
+			RESW: (source: string, split: SicSplit): void => {
+				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 				this.useTab.inc(3 * parseNum(split.args));
-				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
 			},
 
-			RESB: (source: string, split: SicSplit): SicLstEntry => {
+			RESB: (source: string, split: SicSplit): void => {
+				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 				this.useTab.inc(parseNum(split.args));
-				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
 			},
 
-			START: (source: string, split: SicSplit): SicLstEntry => {
+			START: (source: string, split: SicSplit): void => {
 				if (this.useTab.aloc !== 0) {
 					throw new Error("START can only be used as the first line of a program.");
 				}
 				this.startName = split.tag;
 				this.useTab = new SicUseTab(parseInt(split.args, 16));
-				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
+				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 			},
 
-			END: (source: string, split: SicSplit): SicLstEntry => {
+			END: (source: string, split: SicSplit): void => {
 				if (split.args !== this.startName) {
 					throw new Error("END label must be the same as the start label.");
 				}
-				return new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined });
+				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 			},
 
-			BASE: (source: string, split: SicSplit): SicLstEntry => {
+			BASE: (source: string, split: SicSplit): void => {
 				try {
 					baserel = new SicBase(parseNum(split.args));
 				}
 				catch (e) {
 					baserel = new SicBase(new SicPending(split.args));
 				}
-				return new SicLstEntry(source);
+				this.lst.push(new SicLstEntry(source));
 			},
 
-			NOBASE: (source: string, split: SicSplit): SicLstEntry => {
+			NOBASE: (source: string, split: SicSplit): void => {
 				baserel = undefined;
-				return new SicLstEntry(source);
+				this.lst.push(new SicLstEntry(source));
 			},
 
-			LTORG: (source: string, split: SicSplit): SicLstEntry => {
-				return new SicLstEntry(source,
-					{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: this.litTab.createOrg(this.useTab.aloc) });
+			LTORG: (source: string, split: SicSplit): void => {
+				this.lst.push(new SicLstEntry(source));
+				const l = this.litTab.createOrg(this.useTab.aloc);
+				l.forEach(v => {
+					this.lst.push(new SicLstEntry("LTORG-BYTE '" + v.val.toString(16).toUpperCase + "'",
+					{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+					this.useTab.inc(3);
+				});
 			},
 
-			EQU: (source: string, split: SicSplit): SicLstEntry => {
+			EQU: (source: string, split: SicSplit): void => {
 				if (split.tag === "") {
 					throw new Error("EQU needs a non-empty label.");
 				}
@@ -988,12 +956,12 @@ export class SicCompiler {
 				this.equTab[split.tag] = split.args;
 				// this.equTab["foo"] -> bar.
 				// this.equTab["bar"] -> ...
-				return new SicLstEntry(source);
+				this.lst.push(new SicLstEntry(source));
 			},
 
-			USE: (source: string, split: SicSplit): SicLstEntry => {
+			USE: (source: string, split: SicSplit): void => {
 				this.useTab.use(split.args);
-				return new SicLstEntry(source);
+				this.lst.push(new SicLstEntry(source));
 			},
 		};
 
@@ -1028,7 +996,7 @@ export class SicCompiler {
 			}
 
 			if (isDirective(split.op)) {
-				this.lst.push(directiveOps[split.op](val, split));
+				directiveOps[split.op](val, split);
 				return;
 			}
 
@@ -1060,8 +1028,12 @@ export class SicCompiler {
 
 		// add final ltorg if literals are not in one
 		if (this.litTab.pending.size > 0) {
-			this.lst.push(new SicLstEntry(
-				"", { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: this.litTab.createOrg(this.useTab.aloc) }));
+			const l = this.litTab.createOrg(this.useTab.aloc);
+			l.forEach(v => {
+				this.lst.push(new SicLstEntry("LTORG-WORD X'" + v.val.toString(16).toUpperCase + "'",
+					{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+				this.useTab.inc(3);
+			});
 		}
 
 		// pass 2

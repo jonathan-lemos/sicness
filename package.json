@@ -4,7 +4,7 @@
   "description": "Javascript-based SIC/XE compiler/debugger",
   "main": "app.js",
   "scripts": {
-    "test": "mocha --require ts-node/register test/**/*.ts"
+    "test": "mocha --require ts-node/register tests/**/*.ts"
   },
   "repository": {
     "type": "git",

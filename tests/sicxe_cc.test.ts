@@ -630,7 +630,7 @@ describe("SicSpace tests", () => {
 describe("SicCompiler tests", () => {
 	const lines = [
 		"TEST START 100",
-		"\tLDA @4",
+		"BACK LDA @4",
 		"\tLDB =4",
 		"\tLDT #4",
 		"\tLDX 4",
@@ -659,100 +659,35 @@ describe("SicCompiler tests", () => {
 	const lstExpect = [
 		"n    \taloc \trloc \tbytecode\tsource",
 		"-----\t-----\t-----\t--------\t------",
-		"     \t     \t     \t        \tTEST\tSTART\t100",
-		"00001\t100  \t100  \t020004  \t\tLDA @4",
+		"     \t     \t     \t        \tTEST START 100",
+		"00001\t100  \t100  \t020004  \tBACK LDA @4",
 		"00002\t103  \t103  \t01      \t\tLDB =4",
 		"00003\t106  \t106  \t750004  \t\tLDT #4",
 		"00004\t109  \t109  \t070004  \t\tLDX 4",
-		"00005\t10C  \t10C  \t        \t\tLDS =X'ABC',X",
-		"     \t     \t     \t        \tVAL\tEQU\tX'ABC'",
+		"00005\t10C  \t10C  \t6FA014  \t\tLDS =X'1BC',X",
+		"     \t     \t     \t        \tVAL\tEQU\tX'1BC'",
 		"     \t     \t     \t        \t\tUSE FOO",
-		"00006\t10F  \t100  \t0E1     \t\t+STA =4",
-		"00007\t113  \t104  \t        \t\tSTB #ACTION",
-		"00008\t116  \t107  \t        \t\tSTT ACTION",
-		"00009\t119  \t10A  \t        \t\t+STX @ACTION,X",
-		"0000A\t11D  \t10E  \t        \t\tSTS #VAL",
+		"00006\t10F  \t100  \t0F100120\t\t+STA =4",
+		"00007\t113  \t104  \t792010  \t\tSTB #ACTION",
+		"00008\t116  \t107  \t872FE7  \t\tSTT BACK",
+		"00009\t119  \t10A  \t12900126\t\t+STX @ACTION,X",
+		"0000A\t11D  \t10E  \t712003  \t\tSTS #VAL",
 		"     \t     \t     \t        \t\tUSE",
 		"     \t     \t     \t        \t\tLTORG",
-		"0000B\t120  \t10F  \t        \tACTION RMO B,A",
-		"     \t     \t     \t        \tHUGE RESW 1000",
-		"0000C\t122  \t111  \t        \tWORDB BYTE C'EOF'",
+		"0000B\t120  \t10F  \t000004  \tLTORG-WORD X'4'",
+		"0000C\t123  \t112  \t0001BC  \tLTORG-WORD X'1BC'",
+		"0000D\t126  \t115  \tAC30    \tACTION RMO B,A",
+		"     \t129  \t118  \t        \tHUGE RESW 1000",
+		"0000E\t1129 \t1118 \t697970  \tWORDB BYTE C'EOF'",
 		"     \t     \t     \t        \t\tBASE VAL",
-		"0000D\t125  \t114  \t        \t\tLDA ACTION",
+		"0000F\t112C \t111B \t024F6A  \t\tLDA ACTION",
 		"     \t     \t     \t        \t\tNOBASE",
-		"0000E\t128  \t117  \t        \t\tLDA ACTION",
-		"     \t131  \t11A  \t        \t\tEND TEST",
+		"00010\t112F \t111E \t0201BC  \t\tLDA ACTION",
+		"     \t1132 \t1121 \t        \t\tEND TEST",
 	];
-	const p1 = new cc.SicCompiler(lines);
 
 	it("does the thing", () => {
-		expect(p1.lines.length).to.equal(6);
-		//        LDA #4
-		expect(p1.lines[0].loc).to.equal(0xA);
-		// ACTION RMO A, B
-		expect(p1.lines[1].loc).to.equal(0xA + 3);
-		//        FIX
-		expect(p1.lines[2].loc).to.equal(0xA + 3 + 2);
-		//        +LDS #X'ABCDE'
-		expect(p1.lines[3].loc).to.equal(0xA + 3 + 2 + 1);
-		// NUMBER RESW 5
-		expect(p1.lines[4].loc).to.equal(0xA + 3 + 2 + 1 + 4);
-		//        STA NUMBER
-		expect(p1.lines[5].loc).to.equal(0xA + 3 + 2 + 1 + 4 + 15);
-	});
-
-	it("instr test", () => {
-		expect((p1.lines[0].instr as cc.SicFormat3).bc.mnemonic).to.equal("LDA");
-		expect((p1.lines[4].instr as cc.SicSpace).mnemonic).to.equal("RESW");
-		expect((p1.lines[5].instr as cc.SicFormat3).op.pcrel).to.equal(true);
-	});
-
-	it("tags test", () => {
-		expect(p1.tags.getTagLoc(p1.lines, "ACTION")).to.equal(0x0A + 3);
-		expect(p1.tags.getTagLoc(p1.lines, "NUMBER")).to.equal(0x0A + 3 + 2 + 1 + 4);
-		expect(() => p1.tags.getTagLoc(p1.lines, "NOEX")).to.throw();
-	});
-
-	it("toBytes() test", () => {
-		const bytes = p1.toBytes();
-		expect(bytes[0]).to.equal([0x01, 0x00, 0x04]);
-		expect(bytes[1]).to.equal([0xAC, 0x30]);
-		expect(bytes[2]).to.equal([0xC4]);
-		expect(bytes[3]).to.equal([0x6D, 0x1A, 0xBC, 0xDE]);
-		expect(bytes[4]).to.equal([0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-			0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-			0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-		expect(bytes[5]).to.equal([0x0F, 0x2F, 0xF1]);
-	});
-
-	it("toLst() test", () => {
-		const lst = p1.toLst();
-		expect(lst[0].loc).to.equal("");
-		expect(lst[0].bytecode).to.equal("");
-		expect(lst[0].instr).to.equal(lines[0].trim());
-
-		expect(lst[1].loc).to.equal("A");
-		expect(lst[1].bytecode).to.equal("010004");
-		expect(lst[1].instr).to.equal(lines[1].trim());
-
-		expect(lst[2].loc).to.equal("D");
-		expect(lst[2].bytecode).to.equal("AC30");
-		expect(lst[2].instr).to.equal(lines[2].trim());
-
-		expect(lst[3].loc).to.equal("F");
-		expect(lst[3].bytecode).to.equal("C4");
-		expect(lst[3].instr).to.equal(lines[3].trim());
-
-		expect(lst[4].loc).to.equal("10");
-		expect(lst[4].bytecode).to.equal("6D1ABCDE");
-		expect(lst[4].instr).to.equal(lines[4].trim());
-
-		expect(lst[5].loc).to.equal("14");
-		expect(lst[5].bytecode).to.equal("");
-		expect(lst[5].instr).to.equal(lines[5].trim());
-
-		expect(lst[6].loc).to.equal("23");
-		expect(lst[6].bytecode).to.equal("0F2FF1");
-		expect(lst[6].instr).to.equal(lines[6].trim());
+		const p1 = new cc.SicCompiler(lines);
+		expect(p1.lstReport).to.equal(lstExpect);
 	});
 });
