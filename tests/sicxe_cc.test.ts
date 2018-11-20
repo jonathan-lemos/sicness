@@ -124,7 +124,7 @@ describe("SicBase tests", () => {
 });
 
 describe("SicOperandAddr tests", () => {
-	const litTest = new Set<number>();
+	const litTest = new cc.SicLitTab();
 
 	it("handles format 3 arguments correctly", () => {
 		const form3 = new cc.SicOperandAddr("VAL", cc.SicOpType.f3, litTest);
@@ -195,7 +195,7 @@ describe("SicOperandAddr tests", () => {
 		expect(literal.type).to.equal(cc.SicOpType.f3);
 		expect((literal.val as cc.SicPending).val).to.equal(15);
 
-		expect(litTest.has(15)).to.equal(true);
+		expect(litTest.hasPending(15)).to.equal(true);
 	});
 
 	it("handles baserel format 3 arguments correctly", () => {
@@ -274,20 +274,19 @@ describe("SicFormat2 tests", () => {
 });
 
 describe("SicFormat3 tests", () => {
-	const litTest = new Set<number>();
 	const tagTab: {[key: string]: number} = {
 		VAL: 0x123,
 	};
-	const dummyLitTab = new cc.SicLitTab();
+	const litTab = new cc.SicLitTab();
 
 	it("handles pcrel forward correctly", () => {
 		const split = new cc.SicSplit("AAA\tLDX VAL .comment");
-		const f3 = new cc.SicFormat3(split, litTest);
+		const f3 = new cc.SicFormat3(split, litTab);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x50, tagTab, dummyLitTab);
+		f3.makeReady(0x50, tagTab, litTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) - (loc(0x50) + len(0x03)) = 0x0D0
@@ -298,12 +297,12 @@ describe("SicFormat3 tests", () => {
 
 	it("handles pcrel backward correctly", () => {
 		const split = new cc.SicSplit("BBB\tLDX VAL");
-		const f3 = new cc.SicFormat3(split, litTest);
+		const f3 = new cc.SicFormat3(split, litTab);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x200, tagTab, dummyLitTab);
+		f3.makeReady(0x200, tagTab, litTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF23
@@ -314,12 +313,12 @@ describe("SicFormat3 tests", () => {
 
 	it("handles indirect arguments correctly", () => {
 		const split = new cc.SicSplit("\tLDX @VAL");
-		const f3 = new cc.SicFormat3(split, litTest);
+		const f3 = new cc.SicFormat3(split, litTab);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x200, tagTab, dummyLitTab);
+		f3.makeReady(0x200, tagTab, litTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x06 - LDX(0x04) + Ni(0x02)
 		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF20
@@ -330,12 +329,12 @@ describe("SicFormat3 tests", () => {
 
 	it("handles immediate arguments correctly", () => {
 		const split = new cc.SicSplit("\tLDX #VAL");
-		const f3 = new cc.SicFormat3(split, litTest);
+		const f3 = new cc.SicFormat3(split, litTab);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x200, tagTab, dummyLitTab);
+		f3.makeReady(0x200, tagTab, litTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x06 - LDX(0x04) + nI(0x01)
 		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF20
@@ -348,16 +347,16 @@ describe("SicFormat3 tests", () => {
 		const split = new cc.SicSplit("\tLDX =X'1CD'");
 		const split2 = new cc.SicSplit("\tLDX =X'1CE'");
 		const split3 = new cc.SicSplit("\tLDX =461"); // 0x1CD
-		const litTab = new cc.SicLitTab();
+		const litTabEb = new cc.SicLitTab();
 
-		const ft1 = new cc.SicFormat3(split, litTab.pending);
-		expect(litTab.pending.has(0x1CD)).to.equal(true);
-		const ft2 = new cc.SicFormat3(split2, litTab.pending);
-		expect(litTab.pending.has(0x1CE)).to.equal(true);
-		const ft3 = new cc.SicFormat3(split3, litTab.pending);
-		expect(litTab.pending.has(0x1CD)).to.equal(true);
+		const ft1 = new cc.SicFormat3(split, litTabEb);
+		expect(litTabEb.hasPending(0x1CD)).to.equal(true);
+		const ft2 = new cc.SicFormat3(split2, litTabEb);
+		expect(litTabEb.hasPending(0x1CE)).to.equal(true);
+		const ft3 = new cc.SicFormat3(split3, litTabEb);
+		expect(litTabEb.hasPending(0x1CD)).to.equal(true);
 
-		litTab.createOrg(0x2AB);
+		litTabEb.createOrg(0x2AB);
 
 		expect(ft1.length()).to.equal(3);
 		expect(ft1.ready()).to.equal(false);
@@ -366,11 +365,11 @@ describe("SicFormat3 tests", () => {
 		expect(ft3.length()).to.equal(3);
 		expect(ft3.ready()).to.equal(false);
 
-		ft1.makeReady(0x100, tagTab, litTab);
+		ft1.makeReady(0x100, tagTab, litTabEb);
 		expect(ft1.ready()).to.equal(true);
-		ft2.makeReady(0x103, tagTab, litTab);
+		ft2.makeReady(0x103, tagTab, litTabEb);
 		expect(ft2.ready()).to.equal(true);
-		ft3.makeReady(0x106, tagTab, litTab);
+		ft3.makeReady(0x106, tagTab, litTabEb);
 		expect(ft3.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
@@ -396,17 +395,17 @@ describe("SicFormat3 tests", () => {
 		const splitFar = new cc.SicSplit("\tLDX X'9FF'");
 		const splitNear = new cc.SicSplit("\tLDX X'200'");
 		const base = new cc.SicBase(0x300);
-		const f3Far = new cc.SicFormat3(splitFar, litTest, base);
-		const f3Near = new cc.SicFormat3(splitNear, litTest, base);
+		const f3Far = new cc.SicFormat3(splitFar, litTab, base);
+		const f3Near = new cc.SicFormat3(splitNear, litTab, base);
 
 		expect(f3Far.length()).to.equal(3);
 		expect(f3Far.ready()).to.equal(false);
-		f3Far.makeReady(0x100, tagTab, dummyLitTab);
+		f3Far.makeReady(0x100, tagTab, litTab);
 		expect(f3Far.ready()).to.equal(true);
 
 		expect(f3Near.length()).to.equal(3);
 		expect(f3Near.ready()).to.equal(false);
-		f3Near.makeReady(0x100, tagTab, dummyLitTab);
+		f3Near.makeReady(0x100, tagTab, litTab);
 		expect(f3Near.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
@@ -424,12 +423,12 @@ describe("SicFormat3 tests", () => {
 
 	it("handles indexed arguments correctly", () => {
 		const split = new cc.SicSplit("\tLDX VAL,X");
-		const f3 = new cc.SicFormat3(split, litTest);
+		const f3 = new cc.SicFormat3(split, litTab);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x50, tagTab, dummyLitTab);
+		f3.makeReady(0x50, tagTab, litTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) - (loc(0x50) + len(0x03)) = 0x0D0
@@ -444,28 +443,27 @@ describe("SicFormat3 tests", () => {
 		const splitBad3 = new cc.SicSplit("\tLDA A,B");
 		const splitBad4 = new cc.SicSplit("\tRMO A");
 
-		expect(() => new cc.SicFormat3(splitBad1, litTest)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad2, litTest)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad3, litTest)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad4, litTest)).to.throw();
+		expect(() => new cc.SicFormat3(splitBad1, litTab)).to.throw();
+		expect(() => new cc.SicFormat3(splitBad2, litTab)).to.throw();
+		expect(() => new cc.SicFormat3(splitBad3, litTab)).to.throw();
+		expect(() => new cc.SicFormat3(splitBad4, litTab)).to.throw();
 	});
 });
 
 describe("SicFormat4 tests", () => {
-	const litTest = new Set<number>();
+	const litTab = new cc.SicLitTab();
 	const tagTab: {[key: string]: number} = {
 		VAL: 0x123,
 	};
-	const dummyLitTab = new cc.SicLitTab();
 
 	it("handles indirect arguments correctly", () => {
 		const split = new cc.SicSplit("\t+LDX @VAL");
-		const f4 = new cc.SicFormat4(split, litTest);
+		const f4 = new cc.SicFormat4(split, litTab);
 
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
-		f4.makeReady(0x200, tagTab, dummyLitTab);
+		f4.makeReady(0x200, tagTab, litTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x05 - LDX(0x04) + Ni(0x02)
 		//     disp = address(0x123) = 0x00123
@@ -476,12 +474,12 @@ describe("SicFormat4 tests", () => {
 
 	it("handles immediate arguments correctly", () => {
 		const split = new cc.SicSplit("\t+LDX #VAL");
-		const f4 = new cc.SicFormat4(split, litTest);
+		const f4 = new cc.SicFormat4(split, litTab);
 
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
-		f4.makeReady(0x200, tagTab, dummyLitTab);
+		f4.makeReady(0x200, tagTab, litTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x05 - LDX(0x04) + nI(0x01)
 		//     disp = address(0x123)
@@ -495,14 +493,13 @@ describe("SicFormat4 tests", () => {
 		const split = new cc.SicSplit("\t+LDX =X'1CD'");
 		const split2 = new cc.SicSplit("\t+LDX =X'1CE'");
 		const split3 = new cc.SicSplit("\t+LDX =461"); // 0x1CD
-		const litTab = new cc.SicLitTab();
 
-		const ft1 = new cc.SicFormat4(split, litTab.pending);
-		expect(litTab.pending.has(0x1CD)).to.equal(true);
-		const ft2 = new cc.SicFormat4(split2, litTab.pending);
-		expect(litTab.pending.has(0x1CE)).to.equal(true);
-		const ft3 = new cc.SicFormat4(split3, litTab.pending);
-		expect(litTab.pending.has(0x1CD)).to.equal(true);
+		const ft1 = new cc.SicFormat4(split, litTab);
+		expect(litTab.hasPending(0x1CD)).to.equal(true);
+		const ft2 = new cc.SicFormat4(split2, litTab);
+		expect(litTab.hasPending(0x1CE)).to.equal(true);
+		const ft3 = new cc.SicFormat4(split3, litTab);
+		expect(litTab.hasPending(0x1CD)).to.equal(true);
 
 		litTab.createOrg(0x2AB);
 
@@ -544,12 +541,12 @@ describe("SicFormat4 tests", () => {
 
 	it("handles indexed arguments correctly", () => {
 		const split = new cc.SicSplit("\t+LDX VAL,X");
-		const f4 = new cc.SicFormat4(split, litTest);
+		const f4 = new cc.SicFormat4(split, litTab);
 
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
-		f4.makeReady(0x50, tagTab, dummyLitTab);
+		f4.makeReady(0x50, tagTab, litTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) = 0x00123
@@ -565,10 +562,10 @@ describe("SicFormat4 tests", () => {
 		const splitBad3 = new cc.SicSplit("\t+LDA A,B");
 		const splitBad4 = new cc.SicSplit("\t+RMO A");
 
-		expect(() => new cc.SicFormat4(splitBad1, litTest)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad2, litTest)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad3, litTest)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad4, litTest)).to.throw();
+		expect(() => new cc.SicFormat4(splitBad1, litTab)).to.throw();
+		expect(() => new cc.SicFormat4(splitBad2, litTab)).to.throw();
+		expect(() => new cc.SicFormat4(splitBad3, litTab)).to.throw();
+		expect(() => new cc.SicFormat4(splitBad4, litTab)).to.throw();
 	});
 });
 

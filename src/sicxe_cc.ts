@@ -218,7 +218,7 @@ export class SicOperandAddr {
 	public pcrel: boolean;
 	private rdy: boolean;
 
-	constructor(arg: string, type: SicOpType, litList: Set<number>, baserel?: SicBase) {
+	constructor(arg: string, type: SicOpType, litList: SicLitTab, baserel?: SicBase) {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
 		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
@@ -522,7 +522,7 @@ export class SicFormat3 implements ISicInstruction {
 	public bc: SicBytecode;
 	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, litSet: Set<number>, baserel?: SicBase) {
+	constructor(line: SicSplit, litSet: SicLitTab, baserel?: SicBase) {
 		if (!SicFormat3.isFormat3(line.op)) {
 			throw new Error(line.op + " is not format 3");
 		}
@@ -567,7 +567,7 @@ export class SicFormatLegacy implements ISicInstruction {
 	public bc: SicBytecode;
 	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, litList: Set<number>) {
+	constructor(line: SicSplit, litList: SicLitTab) {
 		if (!SicFormatLegacy.isFormatLegacy(line.op)) {
 			throw new Error(line.op + " is not SIC legacy format");
 		}
@@ -612,7 +612,7 @@ export class SicFormat4 implements ISicInstruction {
 	public bc: SicBytecode;
 	public op: SicOperandAddr;
 
-	constructor(line: SicSplit, litList: Set<number>) {
+	constructor(line: SicSplit, litList: SicLitTab) {
 		if (!SicFormat4.isFormat4(line.op)) {
 			throw new Error(line.op + " is not format 4");
 		}
@@ -773,7 +773,7 @@ export class SicLstEntry {
 
 export class SicLitTab {
 	public ltorgs: Array<{ loc: number, val: number }>;
-	public pending: Set<number>;
+	private pending: Set<number>;
 
 	constructor() {
 		this.ltorgs = [];
@@ -805,7 +805,16 @@ export class SicLitTab {
 	}
 
 	public add(n: number): void {
-		this.pending.add(n);
+		if (this.getLitLoc(n) === null) {
+			this.pending.add(n);
+		}
+	}
+
+	public hasPending(n?: number): boolean {
+		if (n === undefined) {
+			return this.pending.size > 0;
+		}
+		return this.pending.has(n);
 	}
 }
 
@@ -1000,13 +1009,13 @@ export class SicCompiler {
 					instr = new SicFormat2(split);
 				}
 				else if (SicFormat3.isFormat3(split.op)) {
-					instr = new SicFormat3(split, this.litTab.pending, baserel);
+					instr = new SicFormat3(split, this.litTab, baserel);
 				}
 				else if (SicFormat4.isFormat4(split.op)) {
-					instr = new SicFormat4(split, this.litTab.pending);
+					instr = new SicFormat4(split, this.litTab);
 				}
 				else if (SicFormatLegacy.isFormatLegacy(split.op)) {
-					instr = new SicFormatLegacy(split, this.litTab.pending);
+					instr = new SicFormatLegacy(split, this.litTab);
 				}
 				else if (SicSpace.isSpace(split.op)) {
 					instr = new SicSpace(split);
@@ -1024,16 +1033,8 @@ export class SicCompiler {
 		});
 
 		// add final ltorg if literals are not in one
-		if (this.litTab.pending.size > 0) {
-			const l = this.litTab.createOrg(this.useTab.aloc);
-			l.forEach(v => {
-				if (this.litTab.getLitLoc(v.val) === null) {
-					this.lst.push(new SicLstEntry("LTORG-WORD X'" + v.val.toString(16).toUpperCase() + "'",
-						{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
-					this.useTab.inc(3);
-				}
-			});
-			this.litTab.pending = new Set<number>();
+		if (this.litTab.hasPending()) {
+			directiveOps["LTORG"]("AUTO-LTORG", new SicSplit("\tAUTO-LTORG"));
 		}
 
 		// pass 2

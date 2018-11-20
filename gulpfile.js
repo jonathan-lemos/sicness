@@ -15,7 +15,7 @@ var gulp        = require("gulp");
 
 var tsProject = tsc.createProject("tsconfig.json");
 
-gulp.task("default", function() {
+gulp.task("build-app", function() {
     return gulp.src([
         "src/*.ts",
     ])
@@ -84,3 +84,5 @@ gulp.task("test", gulp.series("build-test", "istanbul:hook", function() {
         .pipe(mocha({ ui: "bdd" }))
         .pipe(istanbul.writeReports());
 }));
+
+gulp.task("default", gulp.series("build-app", "bundle"));
