@@ -19,8 +19,8 @@ gulp.task("default", function() {
     return gulp.src([
         "src/*.ts",
     ])
-        .pipe(tsProject())
-        .js.pipe(gulp.dest("dist"));
+    .pipe(tsProject())
+    .js.pipe(gulp.dest("dist"));
 });
 
 gulp.task("lint", function() {
@@ -34,8 +34,8 @@ gulp.task("lint", function() {
 
 gulp.task("bundle", function() {
     var libraryName = "sicness";
-    var mainTsFilePath = "src/app.js";
-    var outputFolder = "dst/";
+    var mainTsFilePath = "dist/app.js";
+    var outputFolder = "dist/";
     var outputFileName = libraryName + ".min.js";
 
     var bundler = browserify({

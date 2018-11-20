@@ -8,12 +8,12 @@
 import * as cc from "./sicxe_cc";
 
 const lm = (id: string): HTMLElement => {
-	let e = document.getElementById(id);
+	const e = document.getElementById(id);
 	if (e == null){
-		throw "Element " + id + " was not found in the DOM";
+		throw new Error("Element " + id + " was not found in the DOM");
 	}
 	return e;
-}
+};
 
 const onKeyDown = (e: any) => {
 	// if tab was pressed
@@ -22,60 +22,43 @@ const onKeyDown = (e: any) => {
 		e.preventDefault();
 
 		// instead, insert a tab into our editor.
-		let editor = lm("editor");
-        let doc = editor.ownerDocument.defaultView;
-        let sel = doc.getSelection();
-        let range = sel.getRangeAt(0);
+		const editor = lm("editor");
+		const doc = editor.ownerDocument.defaultView;
+		const sel = doc.getSelection();
+		const range = sel.getRangeAt(0);
 
-        let tabNode = document.createTextNode("\t");
-        range.insertNode(tabNode);
+		const tabNode = document.createTextNode("\t");
+		range.insertNode(tabNode);
 
-        range.setStartAfter(tabNode);
-        range.setEndAfter(tabNode);
-        sel.removeAllRanges();
-        sel.addRange(range);
+		range.setStartAfter(tabNode);
+		range.setEndAfter(tabNode);
+		sel.removeAllRanges();
+		sel.addRange(range);
 	}
-}
+};
 
 const textToArray = (innerText: string): string[] => {
 	return innerText.split("\n");
-}
+};
 
 const arrayToText = (array: string[]): string => {
-	return array.reduce((acc, val) => acc + '\n' + val);
-}
+	return array.reduce((acc, val) => acc + "\n" + val);
+};
 
 const pad = (str: string, len: number) => {
-	while(str.length < len){
+	while (str.length < len) {
 		str = str + " ";
 	}
 	return str;
-}
-
-const formatLst = (array: cc.sic_lst[]): string[] => {
-	let locMax = 0, bcMax = 0;
-	array.forEach(val => {
-		if (val.loc.length > locMax){
-			locMax = val.loc.length;
-		}
-		if (val.bytecode.length > bcMax){
-			bcMax = val.bytecode.length;
-		}
-	});
-	let lines = [
-		pad("loc", locMax) + "\t" + pad("byte", bcMax) + "\t" + "source",
-		pad("---", locMax) + "\t" + pad("----", bcMax) + "\t" + "------"
-	];
-	return lines.concat(array.map(val => pad(val.loc, locMax) + "\t" + pad(val.bytecode, bcMax) + "\t'" + val.instr + "'"));
-}
+};
 
 lm("button_run").onclick = (): void => {
 	try {
-		let arr = textToArray(lm("editor").innerText);
-		let p1 = new cc.sic_pass1(arr);
-		lm("output").innerText = arrayToText(formatLst(p1.toLst()));
+		const arr = textToArray(lm("editor").innerText);
+		const comp = new cc.SicCompiler(arr);
+		lm("output").innerText = arrayToText(comp.lstReport());
 	}
-	catch (e){
-		alert(e);
+	catch (e) {
+		alert((e as Error).message);
 	}
-}
+};
