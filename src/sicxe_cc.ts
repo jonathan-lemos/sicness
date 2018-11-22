@@ -64,7 +64,7 @@ export class SicBytecode {
 	public opcode: number;
 	public format: number;
 
-	constructor(mnemonic: string, opcode: number, format: number){
+	constructor(mnemonic: string, opcode: number, format: number) {
 		this.mnemonic = mnemonic;
 		this.opcode = opcode;
 		this.format = format;
@@ -134,22 +134,22 @@ export const bytecodeTable: {[key: string]: SicBytecode} = {
 export class SicBase {
 	public val: number | SicPending;
 
-	constructor(val: number | SicPending){
+	constructor(val: number | SicPending) {
 		this.val = val;
-		if (this.val instanceof SicPending && typeof (this.val as SicPending).val === "number"){
+		if (this.val instanceof SicPending && typeof (this.val as SicPending).val === "number") {
 			this.val = (this.val as SicPending).val as number;
 		}
 	}
 
-	public ready(): boolean{
+	public ready(): boolean {
 		return typeof this.val === "number";
 	}
 
-	public makeReady(p: {[key: string]: number} | number): void{
-		if (typeof this.val === "number"){
+	public makeReady(p: {[key: string]: number} | number): void {
+		if (typeof this.val === "number") {
 			return;
 		}
-		if (typeof p === "number"){
+		if (typeof p === "number") {
 			this.val = p;
 		}
 		const tagTab = p as {[key: string]: number};
@@ -162,22 +162,22 @@ export class SicBase {
 export class SicPending {
 	public val: string | number;
 
-	constructor(val: string | number){
+	constructor(val: string | number) {
 		this.val = val;
 	}
 
-	public isLiteral(): boolean{
+	public isLiteral(): boolean {
 		return typeof this.val === "number";
 	}
 
-	public isTag(): boolean{
+	public isTag(): boolean {
 		return typeof this.val === "string";
 	}
 
-	public convert(tagTab: {[key: string]: number} | null, litTab: SicLitTab | null): number{
+	public convert(tagTab: {[key: string]: number} | null, litTab: SicLitTab | null): number {
 		let s: number | null;
-		if (typeof this.val === "number"){
-			if (litTab === null){
+		if (typeof this.val === "number") {
+			if (litTab === null) {
 				throw new Error("litTab is undefined but this SicPending is a literal");
 			}
 			s = litTab.getLitLoc(this.val);
@@ -186,7 +186,7 @@ export class SicPending {
 			}
 		}
 		else {
-			if (tagTab === null){
+			if (tagTab === null) {
 				throw new Error("tagTab is undefined but this SicPending is a tag");
 			}
 			s = tagTab[this.val];
@@ -249,7 +249,7 @@ export class SicOperandAddr {
 				litList.add(x);
 				this.val = new SicPending(x);
 			}
-			else{
+			else {
 				this.val = x;
 				this.pcrel = false;
 			}
