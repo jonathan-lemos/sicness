@@ -2,9 +2,10 @@
 A work-in-progress online SIC/XE assembler/debugger written in Typescript (ES6)/HTML/CSS.
 
 ## Features
-Assembler:
-* All SIC/XE instructions are supported
-* SIC Legacy instructions (*LDA) are supported
+### Assembler
+* All SIC/XE instructions are supported.
+* SIC Legacy instructions (*LDA) are supported.
+* Outputs a complete .lst properly.
 * The following compiler directives are supported:
     * START/END
     * RESW/RESB
@@ -15,26 +16,25 @@ Assembler:
     * LTORG (does not place a new literal when out of pcrel/baserel range, fix AUTO-LTORG/LTORG-WORD)
 	* EQU (does not interact with asterisk properly)
 	* \* (does not interact with EQU properly)
-* Outputs a complete .lst properly.
 
-[Website](https://jonathanrlemos.github.io/sicness):
+### Website:
 * Basic frontend complete (it looks awful).
 
 ## Roadmap
-Assembler:
+### Assembler:
 * Implement standalone executable script.
 * Implement .obj format.
 * Implement expression parser (BUFFERB - BUFFERA).
 * Fix LTORG/EQU/\*
 * Implement CSECT/ORG
 
-Website:
+### Website:
 * Clean up the css/html so it doesn't look awful.
 * Make a nicer looking frontend with React/Angular/Vue.
 * Seperate output for .lst and .obj.
 * Add a tabbed setup to switch between assembler and debugger.
 
-Debugger:
+### Debugger:
 * Implement entire thing.
 
 ## Running the project

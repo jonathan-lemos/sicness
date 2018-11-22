@@ -13,14 +13,15 @@ const f = (n: string) => {
 	//...
 }
 
-constructor(n: string) {
+public func(n: string): number {
 	//...
 }
 ```
 * All closing curly braces go on their own line.
+* Two functions need a blank line separating them.
 * Variable names are `camelCase`. Class names are `PascalCase`. Constant names are `ALL_CAPS`.
 * Do not use `extends` unless absolutely necessary. Use `implements` to provide similar functionality across classes.
-* Use ES6 style whenever possible. For example, instead of using `function f(e: string){...}`, use `const f = e => {...}`.
+* Use ES6 style whenever possible. For example, instead of using `function f(e: string) {...}`, use `const f = e => {...}`.
 * Use `const` over `let` whenever possible.
 * If else is done like follows:
 ```javascript
@@ -36,6 +37,7 @@ else {
 ```
 
 ## Submitting a code change
-1. Do not commit directly to `master`. Instead, make your changes on a new branch with a descriptive name (`ltorg-fix`, `adding-comments`, etc.). The `master` branch must contain a working, stable version of the code at all times.
+1. Do not commit non-trivial changes directly to `master`. Instead, make your changes on a new branch with a descriptive name (`ltorg-fix`, `adding-comments`, etc.). The `master` branch must contain a working, stable version of the code at all times.
 2. If your code adds new functionality, add the appropriate unit tests in `/tests`.
 3. When merging into `master`, make sure all tests pass (`npx gulp test`).
+4. Do not use `git commit --amend` or other history-rewriting git commands. These cause others to lose their changes when you `git push --force`.
