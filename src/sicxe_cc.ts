@@ -10,6 +10,11 @@
 // comments are for suckers
 // if it was hard to write it should be hard to read
 
+const asHex = (n: number): string => asHex(n);
+const asWord = (n: number): string => asHex(n).padStart(6, "0");
+const asByte = (n: number): string => asHex(n).padStart(2, "0");
+const bytesToString = (n: number[]): string => n.reduce((acc: string, val: number) => acc + asByte(val), "");
+
 export const sicMakeMask = (nBits: number): number => {
 	let m = 0x0;
 	for (let i = 0; i < nBits; ++i) {
@@ -20,14 +25,14 @@ export const sicMakeMask = (nBits: number): number => {
 
 export const sicCheckUnsigned = (val: number, nBits: number): void => {
 	if (val < 0x0 || val > sicMakeMask(nBits)) {
-		throw new Error(val.toString(16).toUpperCase() + " does not fit in an unsigned " + nBits + "-bit range");
+		throw new Error(asHex(val) + " does not fit in an unsigned " + nBits + "-bit range");
 	}
 };
 
 export const sicMakeUnsigned = (val: number, nBits: number): number => {
 	const m = sicMakeMask(nBits - 1);
 	if (val < -m - 1 || val > m) {
-		throw new Error(val.toString(16).toUpperCase() + " does not fit in a signed " + nBits + "-bit range");
+		throw new Error(asHex(val) + " does not fit in a signed " + nBits + "-bit range");
 	}
 
 	val >>>= 0;
@@ -765,9 +770,7 @@ export class SicLstEntry {
 		if (this.bcData === undefined || this.bcData.inst === undefined) {
 			throw new Error("Cannot make a byteString() if there is no instruction.");
 		}
-		return this.bcData.inst.toBytes().reduce((acc: string, val: number) => {
-			return acc + val.toString(16).toUpperCase().padStart(2, "0");
-		}, "");
+		return bytesToString(this.bcData.inst.toBytes());
 	}
 }
 
@@ -857,7 +860,7 @@ export class SicUseTab {
 
 export class SicCompiler {
 	private lst: SicLstEntry[];
-	private startName: string | undefined;
+	private startData: {name: string, loc: number} | undefined;
 
 	private litTab: SicLitTab;
 	private tagTab: { [key: string]: number };
@@ -910,13 +913,14 @@ export class SicCompiler {
 				if (this.useTab.aloc !== 0) {
 					throw new Error("START can only be used as the first line of a program.");
 				}
-				this.startName = split.tag;
 				this.useTab = new SicUseTab(parseInt(split.args, 16));
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+				this.startData = {name: split.tag, loc: this.useTab.aloc};
 			},
 
 			END: (source: string, split: SicSplit): void => {
-				if (split.args !== this.startName) {
+				if ((this.startData === undefined && split.args !== "") ||
+				(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
 				}
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
@@ -941,7 +945,7 @@ export class SicCompiler {
 				this.lst.push(new SicLstEntry(source));
 				const l = this.litTab.createOrg(this.useTab.aloc);
 				l.forEach(v => {
-					this.lst.push(new SicLstEntry("LTORG-WORD X'" + v.val.toString(16).toUpperCase() + "'",
+					this.lst.push(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
 						{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 					this.useTab.inc(3);
 				});
@@ -1045,17 +1049,17 @@ export class SicCompiler {
 		});
 	}
 
-	public lstReport(): string[] {
+	public makeLst(): string[] {
 		const s = ["n"];
 		s[0] = "n    \taloc \trloc \tbytecode\tsource";
 		s[1] = "-----\t-----\t-----\t--------\t------";
 		let i = 1;
 
 		return s.concat(this.lst.map(ls => {
-			const astr = ls.bcData === undefined ? "" : ls.bcData.aloc.toString(16).toUpperCase();
-			const rstr = ls.bcData === undefined ? "" : ls.bcData.rloc.toString(16).toUpperCase();
+			const astr = ls.bcData === undefined ? "" : asHex(ls.bcData.aloc);
+			const rstr = ls.bcData === undefined ? "" : asHex(ls.bcData.rloc);
 			const inststr = ls.hasInstruction() ? ls.byteString() : "";
-			const istr = i.toString(16).toUpperCase();
+			const istr = asHex(i);
 			++i;
 
 			return istr.padEnd(5, " ") + "\t" +
@@ -1064,6 +1068,46 @@ export class SicCompiler {
 				inststr.padEnd(8, " ") + "\t" +
 				ls.source;
 		}));
+	}
+
+	public makeObj(): string[] {
+		const s: string[] = [];
+
+		// H record
+		let tmp = "H";
+		const loc = this.startData !== undefined ? this.startData.loc : 0;
+		if (this.startData !== undefined) {
+			tmp += this.startData.name;
+		}
+		tmp += " ";
+		tmp += asWord(loc);
+		tmp += asWord(this.useTab.aloc - loc);
+		s.push(tmp);
+
+		// T records - one per instruction
+		this.lst.forEach(ls => {
+			let t = "T";
+
+			if (ls.bcData === undefined || ls.bcData.inst === undefined) {
+				return;
+			}
+
+			t += asWord(ls.bcData.aloc);
+			t += asByte(ls.bcData.inst.toBytes().length);
+			t += bytesToString(ls.bcData.inst.toBytes());
+			s.push(t);
+		});
+
+		// E record
+		tmp = "T";
+		if (this.startData !== undefined) {
+			tmp += this.startData.name;
+		}
+		tmp += " ";
+		tmp += asWord(loc);
+		s.push(tmp);
+
+		return s;
 	}
 
 	public toBytes(): number[][] {
