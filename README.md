@@ -22,6 +22,8 @@ A work-in-progress online SIC/XE assembler/debugger written in Typescript (ES6)/
 
 ## Roadmap
 ### Assembler:
+* Report assembler errors properly in the lst.
+* Add tests for SIC legacy operands.
 * Implement standalone executable script.
 * Implement .obj format.
 * Implement expression parser (BUFFERB - BUFFERA).

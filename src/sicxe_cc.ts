@@ -10,14 +10,31 @@
 // comments are for suckers
 // if it was hard to write it should be hard to read
 
+/**
+ * Converts a number to its hexadecimal string equivalent.
+ */
 export const asHex = (n: number): string => n.toString(16).toUpperCase();
 
+/**
+ * Converts a number to its hexadecimal word (3-byte) equivalent.
+ */
 export const asWord = (n: number): string => asHex(n).padStart(6, "0");
 
+/**
+ * Converts a number to its hexadecimal byte equivalent.
+ */
 export const asByte = (n: number): string => asHex(n).padStart(2, "0");
 
+/**
+ * Converts an array of bytes into a single hexadecimal string.
+ */
 export const bytesToString = (n: number[]): string => n.reduce((acc: string, val: number) => acc + asByte(val), "");
 
+/**
+ * Creates a bitmask of n bits.
+ * @param nBits The number of bits (starting from the right) that should be toggled on.
+ * For example, sicMakeMask(11) === 0x7FF
+ */
 export const sicMakeMask = (nBits: number): number => {
 	let m = 0x0;
 	for (let i = 0; i < nBits; ++i) {
@@ -26,12 +43,24 @@ export const sicMakeMask = (nBits: number): number => {
 	return m;
 };
 
+/**
+ * Checks that a number fits into an unsigned n-bit range, throwing an exception if it doesn't.
+ * @param val The number to check.
+ * @param nBits The number of bits it should fit into.
+ */
 export const sicCheckUnsigned = (val: number, nBits: number): void => {
 	if (val < 0x0 || val > sicMakeMask(nBits)) {
 		throw new Error(asHex(val) + " does not fit in an unsigned " + nBits + "-bit range");
 	}
 };
 
+/**
+ * Optionally converts a signed value into its n-bit unsigned equivalent,
+ * and checks if the result fits into a signed n-bit range.
+ * @param val The number to create an unsigned value for.
+ * @param nBits The number of signed bits the value should fit in.
+ * @returns The new unsigned value.
+ */
 export const sicMakeUnsigned = (val: number, nBits: number): number => {
 	const m = sicMakeMask(nBits - 1);
 	if (val < -m - 1 || val > m) {
@@ -43,14 +72,29 @@ export const sicMakeUnsigned = (val: number, nBits: number): number => {
 	return val;
 };
 
+/**
+ * Class that splits a raw line of code into its label, operand, and optional arguments.
+ */
 export class SicSplit {
+	/** The label of this split. This is "" if there is none. */
 	public tag: string;
+	/** The operand of this split. This cannot be "". */
 	public op: string;
+	/** The arguments of this split. If there is more than one, they are concatenated into one string. */
 	public args: string;
 
+	/**
+	 * Constructs a SicSplit
+	 * @constructor
+	 * @param line The raw line of code to split.
+	 */
 	constructor(line: string) {
+		// Remove all comments from the line and convert it to uppercase.
+		// Comments start with a '.', and this regex removes all characters from a literal dot to the end of line.
 		line = line.replace(/\..*$/, "").toUpperCase();
 
+		// Split the line by any amount of whitespace.
+		// If the line starts with whitespace, the first entry of the array will be "".
 		const lineArr = line.split(/\s+/);
 		if (lineArr.length <= 1) {
 			throw new Error(
@@ -58,7 +102,10 @@ export class SicSplit {
 		}
 		this.tag = lineArr[0];
 		this.op = lineArr[1];
+		// If there is more than one argument.
+		// TODO: parse these individually.
 		if (lineArr.length >= 3) {
+			// Concatenate all of them into one string.
 			this.args = lineArr.slice(2).reduce((acc, val) => acc + val);
 		}
 		else {
@@ -67,11 +114,21 @@ export class SicSplit {
 	}
 }
 
+/**
+ * Represents an entry in the bytecode table.
+ */
 export class SicBytecode {
+	/** The mnemonic (LDX) of this opcode. */
 	public mnemonic: string;
+	/** The hex code (0x04) that corresponds to this mnemonic. */
 	public opcode: number;
+	/** The format (3) of this opcode. A format of 3 means this supports 3, legacy, and 4. */
 	public format: number;
 
+	/**
+	 * Constructs a SicBytecode.
+	 * @constructor
+	 */
 	constructor(mnemonic: string, opcode: number, format: number) {
 		this.mnemonic = mnemonic;
 		this.opcode = opcode;
@@ -79,6 +136,12 @@ export class SicBytecode {
 	}
 }
 
+/**
+ * The list of opcodes a SIC/XE CPU supports as a hashtable.
+ * Accessing a specific opcode can be done like 'bytecodeTable["LDX"]'
+ *
+ * Keep in mind the assembler itself supports directives not listed here such as RESW.
+ */
 export const bytecodeTable: {[key: string]: SicBytecode} = {
 	ADD: new SicBytecode("ADD", 0x18, 3),
 	ADDF: new SicBytecode("ADDF", 0x58, 3),
@@ -139,27 +202,56 @@ export const bytecodeTable: {[key: string]: SicBytecode} = {
 	WD: new SicBytecode("WD", 0xDC, 3),
 };
 
+/**
+ * Represents a base-relative value.
+ * This can either be a number (BASE 4) or a pending value (BASE LBL).
+ */
 export class SicBase {
+	/**
+	 * The value of this base.
+	 * If this is a number, it is ready to be used.
+	 * If this is a SicPending, it needs to be converted before it can be used.
+	 * @see makeReady
+	 */
 	public val: number | SicPending;
 
+	/**
+	 * Constructs a SicBase
+	 * @constructor
+	 * @param val Either a number or a pending value to use as the base value.
+	 */
 	constructor(val: number | SicPending) {
 		this.val = val;
+		// If this SicPending is a literal.
 		if (this.val instanceof SicPending && typeof (this.val as SicPending).val === "number") {
+			// We can just load the value of the literal directly.
 			this.val = (this.val as SicPending).val as number;
 		}
 	}
 
+	/**
+	 * Returns true if this SicBase is ready to be used, false if not.
+	 * @see makeReady
+	 */
 	public ready(): boolean {
 		return typeof this.val === "number";
 	}
 
+	/**
+	 * If this SicBase is not ready(), this function makes it ready.
+	 * @param p Either a hashtable mapping labels to memory locations, or a raw number to be used.
+	 */
 	public makeReady(p: {[key: string]: number} | number): void {
+		// If this.val is a number, this is already ready.
 		if (typeof this.val === "number") {
 			return;
 		}
+		// If p is a number, just set the val to the number.
 		if (typeof p === "number") {
 			this.val = p;
+			return;
 		}
+		// Convert this SicPending (label) using the passed hashtable.
 		const tagTab = p as {[key: string]: number};
 		const pending = this.val as SicPending;
 
@@ -167,23 +259,49 @@ export class SicBase {
 	}
 }
 
+/**
+ * Represents a "pending" value.
+ * This can either be a label or a literal, both of which have to be resolved in pass 2.
+ */
 export class SicPending {
+	/**
+	 * The value.
+	 * If this is a string, it's a label.
+	 * If this is a number, it's a literal.
+	 */
 	public val: string | number;
 
+	/**
+	 * Constructs a SicPending using the passed label or literal.
+	 */
 	constructor(val: string | number) {
 		this.val = val;
 	}
 
+	/**
+	 * Returns true if this SicPending is a literal.
+	 */
 	public isLiteral(): boolean {
 		return typeof this.val === "number";
 	}
 
+	/**
+	 * Returns true if this SicPending is a label.
+	 */
 	public isTag(): boolean {
 		return typeof this.val === "string";
 	}
 
+	/**
+	 * Converts this SicPending into an actual value.
+	 * @param tagTab A hashtable mapping labels to lines of code.
+	 * This can be null if this SicPending does not represent a label.
+	 * @param litTab A SicLitTab mapping literals to lines of code.
+	 * This can be null if this SicPending does not represent a literal.
+	 */
 	public convert(tagTab: {[key: string]: number} | null, litTab: SicLitTab | null): number {
 		let s: number | null;
+		// If this is a literal.
 		if (typeof this.val === "number") {
 			if (litTab === null) {
 				throw new Error("litTab is undefined but this SicPending is a literal");
@@ -193,6 +311,7 @@ export class SicPending {
 				throw new Error(this.val + "was not found in the literal table");
 			}
 		}
+		// Otherwise this is a label.
 		else {
 			if (tagTab === null) {
 				throw new Error("tagTab is undefined but this SicPending is a tag");
@@ -206,32 +325,82 @@ export class SicPending {
 	}
 }
 
+/**
+ * Represents an addressing type for format 3/4 operands.
+ */
 export enum SicOpAddrType {
 	immediate,
 	direct,
 	indirect,
 }
 
+/**
+ * Represents an opcode type.
+ */
 export enum SicOpType {
 	f3,
 	f4,
 	legacy,
 }
+
+/**
+ * Represents a format 3/legacy/4 operand.
+ */
 export class SicOperandAddr {
+	/**
+	 * The value of this operand.
+	 * If this value is a SicPending, it needs to be converted to number before being used.
+	 */
 	public val: number | SicPending;
+	/**
+	 * The opcode type that this operand is mapped to (format 3/legacy/4).
+	 */
 	public type: SicOpType;
+	/**
+	 * The addressing type of this operand (immediate/direct/indirect).
+	 */
 	public addr: SicOpAddrType;
+	/**
+	 * True if this operand uses the index register (X).
+	 */
 	public indexed: boolean;
+	/**
+	 * A corresponding SicBase if this operand can use base-relative, undefined if not.
+	 */
 	public base: SicBase | undefined;
+	/**
+	 * True if this operand can use pc-relative.
+	 */
 	public pcrel: boolean;
+	/**
+	 * True if this operand is ready to convert into bytecode.
+	 */
 	private rdy: boolean;
 
+	/**
+	 * Constructs a SicOperandAddr.
+	 * @param arg The argument as a string.
+	 * @param type The type of opcode it should be mapped to (format 3/legacy/4).
+	 * @param litList The current LITTAB in use. If this argument is a literal it will be added to the pending list.
+	 * @param baserel An optional SicBase denoting that this operand can use base-relative addressing.
+	 */
 	constructor(arg: string, type: SicOpType, litList: SicLitTab, baserel?: SicBase) {
+		// Matches a decimal argument (@1234).
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
+		// Matches a hexadecimal argument (@X'1ABC')
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
+		// Matches a single character argument (@'Q')
 		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
+		// Matches a label argument (@VAL)
 		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
 
+		// For all of the above regexes:
+		// match[0] === The raw input string
+		// match[1] === "=", "#", "@", or undefined.
+		// match[2] === The actual contents of the match.
+		// match[3] === ",X", or undefined.
+
+		// Converts match[1] to the correct addressing type.
 		const getType = (char: string): SicOpAddrType => {
 			switch (char) {
 				case "#":
@@ -244,74 +413,104 @@ export class SicOperandAddr {
 			}
 		};
 
+		// Returns true if match[1] points to a literal.
 		const isLiteral = (c: string): boolean => c !== undefined && c.charAt(0) === "=";
 
 		this.type = type;
+		// Only format 3 can use base-relative addressing.
 		this.base = this.type === SicOpType.f3 ? baserel : undefined;
+		// Only format 3 can use pc-relative addressing.
 		this.pcrel = this.type === SicOpType.f3;
 
 		let match: RegExpMatchArray | null;
 		if ((match = arg.match(reDecimal)) !== null) {
+			// Parse the second part of this operand as a decimal.
 			const x = parseInt(match[2], 10);
+			// If the argument is a literal.
 			if (isLiteral(match[1])) {
+				// Add this literal to the pending list if it is not already there.
 				litList.add(x);
+				// Set this value to a new SicPending corresponding to the literal.
 				this.val = new SicPending(x);
 			}
 			else {
+				// Set this value to the raw number.
 				this.val = x;
+				// Raw numeric arguments do not use pc-relative addressing.
 				this.pcrel = false;
 			}
-			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
 		}
 		else if ((match = arg.match(reHex)) !== null) {
+			// Parse the second part of this operand as hexadecimal.
 			const x = parseInt(match[2], 16);
+			// If the argument is a literal.
 			if (isLiteral(match[1])) {
+				// Add this literal to the pending list if it is not already there.
 				litList.add(x);
+				// Set this value to a new SicPending corresponding to the literal.
 				this.val = new SicPending(x);
 			}
 			else {
+				// Set this value to the raw number.
 				this.val = x;
+				// Raw numeric arguments do not use pc-relative addressing.
 				this.pcrel = false;
 			}
-			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
 		}
 		else if ((match = arg.match(reChar)) !== null) {
 			const x = match[2].charCodeAt(0);
+			// If the argument is a literal.
 			if (isLiteral(match[1])) {
+				// Add this literal to the pending list if it is not already there.
 				litList.add(x);
+				// Set this value to a new SicPending corresponding to the literal.
 				this.val = new SicPending(x);
 			}
 			else {
+				// Set this value to the raw number.
 				this.val = x;
+				// Raw numeric arguments do not use pc-relative addressing.
 				this.pcrel = false;
 			}
-			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
 		}
 		else if ((match = arg.match(reTag)) != null) {
+			// Set this value to a new SicPending corresponding to the label.
 			this.val = new SicPending(match[2]);
-			this.addr = getType(match[1]);
-			this.indexed = match[3] != null;
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
 		}
+		// Set this addressing mode based on @/=.
+		this.addr = getType(match[1]);
+		// Indexing is true if ",X" was matched at the end of the string.
+		this.indexed = match[3] != null;
 
+		// If @ or # is used with a SIC legacy opcode.
 		if (this.addr !== SicOpAddrType.direct && this.type === SicOpType.legacy) {
 			throw new Error("SIC Legacy instructions can only use direct addressing");
 		}
 
+		// If this is not pcrel, not baserel, and not pending, it is ready.
 		this.rdy = !this.pcrel &&
 			this.base === undefined &&
 			typeof this.val === "number";
 	}
 
+	/**
+	 * Returns true if this SicOperandAddr is ready to be used.
+	 * @see makeReady
+	 */
 	public ready(): boolean {
 		return this.rdy;
 	}
 
+	/**
+	 * If this SicOperandAddr is not ready, this method makes it ready.
+	 * @param pc The current program counter when the corresponding instruction is executed.
+	 * This is equal to the current line of code + the length of this instruction.
+	 * @param tagTab A hashtable mapping labels to their corresponding lines of code.
+	 * @param litTab A SicLitTab mapping literals to their corresponding lines of code.
+	 */
 	public makeReady(pc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
 		if (this.rdy) {
 			return;
@@ -876,7 +1075,7 @@ export class SicUseTab {
 
 export class SicCompiler {
 	private lst: SicLstEntry[];
-	private startData: {name: string, loc: number} | undefined;
+	private startData: { name: string, loc: number } | undefined;
 
 	private litTab: SicLitTab;
 	private tagTab: { [key: string]: number };
@@ -931,12 +1130,12 @@ export class SicCompiler {
 				}
 				this.useTab = new SicUseTab(parseInt(split.args, 16));
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
-				this.startData = {name: split.tag, loc: this.useTab.aloc};
+				this.startData = { name: split.tag, loc: this.useTab.aloc };
 			},
 
 			END: (source: string, split: SicSplit): void => {
 				if ((this.startData === undefined && split.args !== "") ||
-				(this.startData !== undefined && split.args !== this.startData.name)) {
+					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
 				}
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));

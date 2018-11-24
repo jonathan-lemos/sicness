@@ -25,11 +25,13 @@ gulp.task("build-app", function() {
 
 gulp.task("lint", function() {
     return gulp.src([
-        "src/**/*.ts",
-        "tests/**/*.ts"
+        "src/*.ts",
+        "tests/*.ts"
     ])
-        .pipe(tslint({}))
-        .pipe(tslint.report("verbose"));
+        .pipe(tslint({
+            formatter: "verbose"
+        }))
+        .pipe(tslint.report());
 });
 
 gulp.task("bundle", function() {

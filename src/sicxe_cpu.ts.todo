@@ -5,14 +5,14 @@
  * of the MIT license.  See the LICENSE file for details.
 */
 
-import {sicCheckUnsigned, sicDecToReg, sicMakeUnsigned, sicRegToDec} from "./sicxe_cc";
+import { sicCheckUnsigned, sicDecToReg, sicMakeUnsigned, sicRegToDec } from "./sicxe_cc";
 
 export class OpcodeArrEntry{
 	public mnemonic: string;
 	public opcode: number;
 	public format: number;
 
-	constructor(mnemonic: string, opcode: number, format: number){
+	constructor(mnemonic: string, opcode: number, format: number) {
 		this.mnemonic = mnemonic;
 		this.opcode = opcode;
 		this.format = format;
@@ -93,7 +93,7 @@ export class SicRdFile {
 	}
 
 	public get(): number {
-		if (this.contents.length === 0){
+		if (this.contents.length === 0) {
 			return 0x04; // EOF
 		}
 		return this.contents.shift() as number;
@@ -129,38 +129,38 @@ export interface ISicFile {
 export class SicHexRegister{
 	private val: number;
 
-	constructor(defaultVal: number = 0xFFFFFF){
+	constructor(defaultVal: number = 0xFFFFFF) {
 		this.val = defaultVal;
 	}
 
-	public add(n: number){
+	public add(n: number) {
 		sicCheckUnsigned(n, 24);
 		this.val += n;
 		this.correctFlow();
 	}
 
-	public sub(n: number){
+	public sub(n: number) {
 		sicCheckUnsigned(n, 24);
 		this.val -= n;
 		this.correctFlow();
 	}
 
-	public mul(n: number){
+	public mul(n: number) {
 		sicCheckUnsigned(n, 24);
 		this.val *= n;
 		this.correctFlow();
 	}
 
-	public div(n: number): void{
+	public div(n: number): void {
 		sicCheckUnsigned(n, 24);
 		this.val /= n;
 	}
 
-	public get(): number{
+	public get(): number {
 		return this.val;
 	}
 
-	public float(n: number): number{
+	public float(n: number): number {
 		return 0; // TODO
 	}
 
@@ -173,11 +173,11 @@ export class SicHexRegister{
 }
 
 export class SicFloatRegister{
-	private static hexToFloat(n: number): number{
+	private static hexToFloat(n: number): number {
 		return 0; // TODO
 	}
 
-	private static floatToHex(n: number): number{
+	private static floatToHex(n: number): number {
 		return 0; // TODO
 	}
 
@@ -187,31 +187,31 @@ export class SicFloatRegister{
 		this.val = defaultVal;
 	}
 
-	public add(n: number): void{
+	public add(n: number): void {
 		this.val += n;
 	}
 
-	public sub(n: number): void{
+	public sub(n: number): void {
 		this.val -= n;
 	}
 
-	public mul(n: number): void{
+	public mul(n: number): void {
 		this.val *= n;
 	}
 
-	public div(n: number): void{
+	public div(n: number): void {
 		this.val /= n;
 	}
 
-	public getHex(): number{
+	public getHex(): number {
 		return SicFloatRegister.floatToHex(this.val);
 	}
 
-	public getFloat(): number{
+	public getFloat(): number {
 		return this.val;
 	}
 
-	public fix(n: number){
+	public fix(n: number) {
 		return Math.floor(n);
 	}
 }
@@ -223,6 +223,15 @@ export class SicControlRegister{
 	private conditionCode: number;
 	private maskInterrupt: number;
 	private interuptCode: number;
+
+	constructor() {
+		this.modeSuper = false;
+		this.stateRunning = false;
+		this.pid = 0;
+		this.conditionCode = 0;
+		this.maskInterrupt = 0;
+		this.interuptCode = 0;
+	}
 }
 
 export type SicCpuOperation = (() => void) | ((op: number) => void) | ((op1: number, op2: number) => void);
@@ -238,7 +247,7 @@ export class SicCpu {
 		reg["T"] = new SicHexRegister(); // general (xe only)
 		reg["F"] = new SicHexRegister(); // floating point (xe only)
 		reg["PC"] = new SicHexRegister(0x000000); // program-counter (instruction)
-		reg["SW"] = "0".charCodeAt(0); // status-word (flag)
+		reg["SW"] = new SicControlRegister(); // status-word (flag)
 		return reg;
 	}
 
