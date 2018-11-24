@@ -56,7 +56,11 @@ lm("button_run").onclick = (): void => {
 	try {
 		const arr = textToArray(lm("editor").innerText);
 		const comp = new cc.SicCompiler(arr);
-		lm("output").innerText = arrayToText(comp.makeLst());
+		let output = ["-----lst-----"];
+		output = output.concat(comp.makeLst());
+		output = output.concat("", "", "-----obj-----");
+		output = output.concat(comp.makeObj());
+		lm("output").innerText = arrayToText(output);
 	}
 	catch (e) {
 		alert((e as Error).message);

@@ -2,8 +2,9 @@
   "name": "sicness",
   "version": "1.0.0",
   "description": "Javascript-based SIC/XE compiler/debugger",
-  "main": "app.js",
+  "main": "src/sicasm.ts",
   "scripts": {
+	"start": "npx ts-node src/sicasm.ts",
     "test": "mocha --require ts-node/register tests/**/*.ts"
   },
   "repository": {
@@ -36,5 +37,8 @@
     "typescript": "^3.1.6",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0"
+  },
+  "dependencies": {
+    "@types/node": "^10.12.10"
   }
 }

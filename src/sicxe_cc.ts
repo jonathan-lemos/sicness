@@ -198,6 +198,7 @@ addBytecode(new SicBytecode("FLOAT", 0xC0, 1));
 addBytecode(new SicBytecode("HIO", 0xF4, 1));
 addBytecode(new SicBytecode("J", 0x3C, 3));
 addBytecode(new SicBytecode("JEQ", 0x30, 3));
+addBytecode(new SicBytecode("JGT", 0x34, 3));
 addBytecode(new SicBytecode("JLT", 0x38, 3));
 addBytecode(new SicBytecode("JSUB", 0x48, 3));
 addBytecode(new SicBytecode("LDA", 0x00, 3));
@@ -226,6 +227,7 @@ addBytecode(new SicBytecode("STB", 0x78, 3));
 addBytecode(new SicBytecode("STCH", 0x54, 3));
 addBytecode(new SicBytecode("STF", 0x80, 3));
 addBytecode(new SicBytecode("STI", 0xD4, 3));
+addBytecode(new SicBytecode("STL", 0x14, 3));
 addBytecode(new SicBytecode("STS", 0x7C, 3));
 addBytecode(new SicBytecode("STSW", 0xE8, 3));
 addBytecode(new SicBytecode("STT", 0x84, 3));
@@ -1518,6 +1520,8 @@ export class SicCompiler {
 	private equTab: { [key: string]: string };
 	/** The USE tab / locctr tracker. */
 	private useTab: SicUseTab;
+	/** True if an error was found during compilation. */
+	private errflag: boolean;
 
 	/**
 	 * Constructs a SicCompiler and compiles the code.
@@ -1532,6 +1536,7 @@ export class SicCompiler {
 		this.equTab = {};
 		this.useTab = new SicUseTab(0);
 		this.litTab = new SicLitTab();
+		this.errflag = false;
 
 		/**
 		 * Parses a numeric argument as decimal, hexadecimal, or character.
@@ -1715,6 +1720,7 @@ export class SicCompiler {
 			}
 			// if there was an error
 			catch (e) {
+				this.errflag = true;
 				// report it
 				this.lst.push(new SicLstEntry(val, (e as Error).message));
 			}
@@ -1799,6 +1805,13 @@ export class SicCompiler {
 		s.push("E" + asWord(loc));
 
 		return s;
+	}
+
+	/**
+	 * True if there was an error during compilation.
+	 */
+	public get err() {
+		return this.errflag;
 	}
 
 	/**
