@@ -39,5 +39,8 @@ else {
 ## Submitting a code change
 1. Do not commit non-trivial changes directly to `master`. Instead, make your changes on a new branch with a descriptive name (`ltorg-fix`, `adding-comments`, etc.). The `master` branch must contain a working, stable version of the code at all times.
 2. If your code adds new functionality, add the appropriate unit tests in `/tests`.
-3. When merging into `master`, make sure all tests pass (`npx gulp test`).
+3. When merging into `master`
+    1. Make sure all tests pass (`npx gulp test`).
+	2. Merge `master` into your branch and resolve all conflicts.
+	3. Then `git checkout master` and merge your branch into master.
 4. Do not use `git commit --amend` or other history-rewriting git commands. These cause others to lose their changes when you `git push --force`.
