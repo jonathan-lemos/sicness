@@ -83,7 +83,7 @@ cd docs
 python -m http.server
 ```
 
-You can then access the website by visiting <localhost:8000>.
+You can then access the website by visiting `localhost:8000`.
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributing guidelines.

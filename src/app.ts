@@ -58,8 +58,13 @@ lm("button_run").onclick = (): void => {
 		const comp = new cc.SicCompiler(arr);
 		let output = ["-----lst-----"];
 		output = output.concat(comp.makeLst());
-		output = output.concat("", "", "-----obj-----");
-		output = output.concat(comp.makeObj());
+		if (!comp.err) {
+			output = output.concat("", "", "-----obj-----");
+			output = output.concat(comp.makeObj());
+		}
+		else {
+			output = output.concat("", "", "No obj generation due to errors in lst");
+		}
 		lm("output").innerText = arrayToText(output);
 	}
 	catch (e) {

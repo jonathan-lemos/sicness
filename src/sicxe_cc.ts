@@ -1763,7 +1763,7 @@ export class SicCompiler {
 				ls.source;
 
 			if (ls.errmsg !== undefined) {
-				msg += "\n*error: " + ls.errmsg + "*";
+				msg += "\n* Error: " + ls.errmsg + " *";
 			}
 
 			return msg;
