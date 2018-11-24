@@ -1,6 +1,31 @@
 import { expect } from "chai";
 import * as cc from "../src/sicxe_cc";
 
+describe("Number to string tests", () => {
+	it("converts to hex correctly", () => {
+		expect(cc.asHex(0x63)).to.equal("63");
+		expect(cc.asHex(255)).to.equal("FF");
+		expect(cc.asHex(1234)).to.equal("4D2");
+	});
+
+	it("converts a number to a byte correctly", () => {
+		expect(cc.asByte(0x63)).to.equal("63");
+		expect(cc.asByte(255)).to.equal("FF");
+		expect(cc.asByte(15)).to.equal("0F");
+	});
+
+	it("converts a number to a word correctly", () => {
+		expect(cc.asWord(0x63)).to.equal("000063");
+		expect(cc.asWord(16777215)).to.equal("FFFFFF");
+		expect(cc.asWord(1234)).to.equal("0004D2");
+	});
+
+	it("reduces a byte array to a string correctly", () => {
+		expect(cc.bytesToString([0x12, 0x34, 0x56, 0x78, 0x9A])).to.equal("123456789A");
+		expect(cc.bytesToString([0x0A, 0x0B, 255, 1])).to.equal("0A0BFF01");
+	});
+});
+
 describe("SicUnsigned tests", () => {
 	it("creates bitmasks correctly", () => {
 		expect(cc.sicMakeMask(7)).to.equal(0x7F);
@@ -640,8 +665,8 @@ describe("SicCompiler tests", () => {
 		"D    \t11D  \t10E  \t7D01BC  \t\tSTS #VAL",
 		"E    \t     \t     \t        \t\tUSE",
 		"F    \t     \t     \t        \t\tLTORG",
-		"10   \t120  \t10F  \t        \tLTORG-WORD X'4'",
-		"11   \t123  \t112  \t        \tLTORG-WORD X'1BC'",
+		"10   \t120  \t10F  \t000004  \tLTORG-WORD X'4'",
+		"11   \t123  \t112  \t0001BC  \tLTORG-WORD X'1BC'",
 		"12   \t126  \t115  \tAC30    \tACTION RMO B,A",
 		"13   \t128  \t117  \tC4      \t\tFIX",
 		"14   \t129  \t118  \t6F100120\t\t+LDS =4",
@@ -654,9 +679,39 @@ describe("SicCompiler tests", () => {
 		"1B   \t1136 \t1125 \t030126  \t\tLDA ACTION",
 		"1C   \t1139 \t1128 \t        \t\tEND TEST",
 	];
+	const objExpect = [
+		// TEST = name of prog, 000100 = start loc, 001039 = length of prog
+		"HTEST 000100001039",
+		// 000100 = loc, 03 = len, 020004 = obj code
+		"T00010003020004",
+		"T000103036B201A",
+		"T00010603750004",
+		"T00010903070004",
+		"T00010C036FA014",
+		"T00010F040F100120",
+		"T00011303792010",
+		"T00011603872FE7",
+		"T0001190412900126",
+		"T00011D037D01BC",
+		"T00012003000004",
+		"T000123030001BC",
+		"T00012602AC30",
+		"T00012801C4",
+		"T000129046F100120",
+		"T00012D03000ABC",
+		"T00113003454F46",
+		"T00113303034F6A",
+		"T00113603030126",
+		"E000100",
+	];
 
-	it("does the thing", () => {
+	it("creates a correct lst for a sample program", () => {
 		const p1 = new cc.SicCompiler(lines);
-		expect(p1.lstReport()).to.eql(lstExpect);
+		expect(p1.makeLst()).to.eql(lstExpect);
+	});
+
+	it("creates a correct obj for a sample program", () => {
+		const p1 = new cc.SicCompiler(lines);
+		expect(p1.makeObj()).to.eql(objExpect);
 	});
 });

@@ -10,10 +10,13 @@
 // comments are for suckers
 // if it was hard to write it should be hard to read
 
-const asHex = (n: number): string => asHex(n);
-const asWord = (n: number): string => asHex(n).padStart(6, "0");
-const asByte = (n: number): string => asHex(n).padStart(2, "0");
-const bytesToString = (n: number[]): string => n.reduce((acc: string, val: number) => acc + asByte(val), "");
+export const asHex = (n: number): string => n.toString(16).toUpperCase();
+
+export const asWord = (n: number): string => asHex(n).padStart(6, "0");
+
+export const asByte = (n: number): string => asHex(n).padStart(2, "0");
+
+export const bytesToString = (n: number[]): string => n.reduce((acc: string, val: number) => acc + asByte(val), "");
 
 export const sicMakeMask = (nBits: number): number => {
 	let m = 0x0;
@@ -657,20 +660,9 @@ export class SicSpace implements ISicInstruction {
 		return re.test(mnemonic);
 	}
 
-	private static splitWord(n: number): number[] {
+	public static splitWord(n: number): number[] {
 		sicCheckUnsigned(n, 24);
 		return [(n & 0xFF0000) >>> 16, (n & 0xFF00) >>> 8, (n & 0xFF)];
-	}
-
-	private static makeWord(arr: number[]): number {
-		if (arr.length > 3) {
-			throw new Error("Words can have a max of 3 bytes");
-		}
-		let ret = 0;
-		for (let i = arr.length - 1, j = 0; i >= 0; --i, j += 8) {
-			ret += arr[i] << j;
-		}
-		return ret;
 	}
 
 	public mnemonic: string;
@@ -735,6 +727,30 @@ export class SicSpace implements ISicInstruction {
 			default:
 				throw new Error("Mnemonic is invalid.");
 		}
+	}
+}
+
+export class SicLiteral implements ISicInstruction {
+	private val: number;
+
+	constructor(val: number) {
+		this.val = val;
+	}
+
+	public length(): number {
+		return 3;
+	}
+
+	public ready(): boolean {
+		return true;
+	}
+
+	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+		return;
+	}
+
+	public toBytes(): number[] {
+		return SicSpace.splitWord(this.val);
 	}
 }
 
@@ -946,7 +962,7 @@ export class SicCompiler {
 				const l = this.litTab.createOrg(this.useTab.aloc);
 				l.forEach(v => {
 					this.lst.push(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
-						{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+						{ aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: new SicLiteral(v.val) }));
 					this.useTab.inc(3);
 				});
 			},
@@ -1099,13 +1115,7 @@ export class SicCompiler {
 		});
 
 		// E record
-		tmp = "T";
-		if (this.startData !== undefined) {
-			tmp += this.startData.name;
-		}
-		tmp += " ";
-		tmp += asWord(loc);
-		s.push(tmp);
+		s.push("E" + asWord(loc));
 
 		return s;
 	}
