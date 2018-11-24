@@ -116,23 +116,48 @@ export class SicSplit {
 
 /**
  * Represents an entry in the bytecode table.
+ * This class is read-only.
  */
 export class SicBytecode {
 	/** The mnemonic (LDX) of this opcode. */
-	public mnemonic: string;
+	private mnemonicPvt: string;
 	/** The hex code (0x04) that corresponds to this mnemonic. */
-	public opcode: number;
+	private opcodePvt: number;
 	/** The format (3) of this opcode. A format of 3 means this supports 3, legacy, and 4. */
-	public format: number;
+	private formatPvt: number;
 
 	/**
 	 * Constructs a SicBytecode.
 	 * @constructor
 	 */
 	constructor(mnemonic: string, opcode: number, format: number) {
-		this.mnemonic = mnemonic;
-		this.opcode = opcode;
-		this.format = format;
+		this.mnemonicPvt = mnemonic;
+		this.opcodePvt = opcode;
+		this.formatPvt = format;
+	}
+
+	/**
+	 * Mnemonic getter with no corresponding setter.
+	 * This causes mnemonic to be effectively read-only.
+	 */
+	public get mnemonic(): string {
+		return this.mnemonicPvt;
+	}
+
+	/**
+	 * Opcode getter with no corresponding setter.
+	 * This causes opcode to be effectively read-only.
+	 */
+	public get opcode(): number {
+		return this.opcodePvt;
+	}
+
+	/**
+	 * Format getter with no corresponding setter.
+	 * This causes format to be effectively read-only.
+	 */
+	public get format(): number {
+		return this.formatPvt;
 	}
 }
 
@@ -142,65 +167,78 @@ export class SicBytecode {
  *
  * Keep in mind the assembler itself supports directives not listed here such as RESW.
  */
-export const bytecodeTable: {[key: string]: SicBytecode} = {
-	ADD: new SicBytecode("ADD", 0x18, 3),
-	ADDF: new SicBytecode("ADDF", 0x58, 3),
-	ADDR: new SicBytecode("ADDR", 0x90, 2),
-	AND: new SicBytecode("AND", 0x40, 3),
-	CLEAR: new SicBytecode("CLEAR", 0xB4, 2),
-	COMP: new SicBytecode("COMP", 0x28, 3),
-	COMPF: new SicBytecode("COMPF", 0x88, 3),
-	COMPR: new SicBytecode("COMPR", 0xA0, 2),
-	DIV: new SicBytecode("DIV", 0x24, 3),
-	DIVF: new SicBytecode("DIVF", 0x64, 3),
-	DIVR: new SicBytecode("DIVR", 0x9C, 2),
-	FIX: new SicBytecode("FIX", 0xC4, 1),
-	FLOAT: new SicBytecode("FLOAT", 0xC0, 1),
-	HIO: new SicBytecode("HIO", 0xF4, 1),
-	J: new SicBytecode("J", 0x3C, 3),
-	JEQ: new SicBytecode("JEQ", 0x30, 3),
-	JLT: new SicBytecode("JLT", 0x38, 3),
-	JSUB: new SicBytecode("JSUB", 0x48, 3),
-	LDA: new SicBytecode("LDA", 0x00, 3),
-	LDB: new SicBytecode("LDB", 0x68, 3),
-	LDCH: new SicBytecode("LDCH", 0x50, 3),
-	LDF: new SicBytecode("LDF", 0x70, 3),
-	LDL: new SicBytecode("LDL", 0x08, 3),
-	LDS: new SicBytecode("LDS", 0x6C, 3),
-	LDT: new SicBytecode("LDT", 0x74, 3),
-	LDX: new SicBytecode("LDX", 0x04, 3),
-	LPS: new SicBytecode("LPS", 0xD0, 3),
-	MUL: new SicBytecode("MUL", 0x20, 3),
-	MULF: new SicBytecode("MULF", 0x60, 3),
-	MULR: new SicBytecode("MULR", 0x98, 2),
-	NORM: new SicBytecode("NORM", 0xC8, 1),
-	OR: new SicBytecode("OR", 0x44, 3),
-	RD: new SicBytecode("RD", 0xD8, 3),
-	RMO: new SicBytecode("RMO", 0xAC, 2),
-	RSUB: new SicBytecode("RSUB", 0x4C, 3),
-	SHIFTL: new SicBytecode("SHIFTL", 0xA4, 2),
-	SHIFTR: new SicBytecode("SHIFTR", 0xA8, 2),
-	SIO: new SicBytecode("SIO", 0xF0, 1),
-	SSK: new SicBytecode("SSK", 0xEC, 3),
-	STA: new SicBytecode("STA", 0x0C, 3),
-	STB: new SicBytecode("STB", 0x78, 3),
-	STCH: new SicBytecode("STCH", 0x54, 3),
-	STF: new SicBytecode("STF", 0x80, 3),
-	STI: new SicBytecode("STI", 0xD4, 3),
-	STS: new SicBytecode("STS", 0x7C, 3),
-	STSW: new SicBytecode("STSW", 0xE8, 3),
-	STT: new SicBytecode("STT", 0x84, 3),
-	STX: new SicBytecode("STX", 0x10, 3),
-	SUB: new SicBytecode("SUB", 0x1C, 3),
-	SUBF: new SicBytecode("SUBF", 0x5C, 3),
-	SUBR: new SicBytecode("SUBR", 0x94, 2),
-	SVC: new SicBytecode("SVC", 0xB0, 2),
-	TD: new SicBytecode("TD", 0xE0, 3),
-	TIO: new SicBytecode("TIO", 0xF8, 1),
-	TIX: new SicBytecode("TIX", 0x2C, 3),
-	TIXR: new SicBytecode("TIXR", 0xB8, 2),
-	WD: new SicBytecode("WD", 0xDC, 3),
+export const bytecodeTable: {[key: string]: SicBytecode} = {};
+
+/**
+ * Adds a constant property to the bytecode table.
+ * Adding properties the regular way causes them to be writable, which can lead to all sorts of nasty bugs.
+ */
+const addBytecode = (bc: SicBytecode) => {
+	Object.defineProperty(bytecodeTable, bc.mnemonic, {
+		configurable: true,
+		enumerable: true,
+		value: bc,
+		writable: false,
+	});
 };
+
+addBytecode(new SicBytecode("ADD", 0x18, 3));
+addBytecode(new SicBytecode("ADDF", 0x58, 3));
+addBytecode(new SicBytecode("ADDR", 0x90, 2));
+addBytecode(new SicBytecode("AND", 0x40, 3));
+addBytecode(new SicBytecode("CLEAR", 0xB4, 2));
+addBytecode(new SicBytecode("COMP", 0x28, 3));
+addBytecode(new SicBytecode("COMPF", 0x88, 3));
+addBytecode(new SicBytecode("COMPR", 0xA0, 2));
+addBytecode(new SicBytecode("DIV", 0x24, 3));
+addBytecode(new SicBytecode("DIVF", 0x64, 3));
+addBytecode(new SicBytecode("DIVR", 0x9C, 2));
+addBytecode(new SicBytecode("FIX", 0xC4, 1));
+addBytecode(new SicBytecode("FLOAT", 0xC0, 1));
+addBytecode(new SicBytecode("HIO", 0xF4, 1));
+addBytecode(new SicBytecode("J", 0x3C, 3));
+addBytecode(new SicBytecode("JEQ", 0x30, 3));
+addBytecode(new SicBytecode("JLT", 0x38, 3));
+addBytecode(new SicBytecode("JSUB", 0x48, 3));
+addBytecode(new SicBytecode("LDA", 0x00, 3));
+addBytecode(new SicBytecode("LDB", 0x68, 3));
+addBytecode(new SicBytecode("LDCH", 0x50, 3));
+addBytecode(new SicBytecode("LDF", 0x70, 3));
+addBytecode(new SicBytecode("LDL", 0x08, 3));
+addBytecode(new SicBytecode("LDS", 0x6C, 3));
+addBytecode(new SicBytecode("LDT", 0x74, 3));
+addBytecode(new SicBytecode("LDX", 0x04, 3));
+addBytecode(new SicBytecode("LPS", 0xD0, 3));
+addBytecode(new SicBytecode("MUL", 0x20, 3));
+addBytecode(new SicBytecode("MULF", 0x60, 3));
+addBytecode(new SicBytecode("MULR", 0x98, 2));
+addBytecode(new SicBytecode("NORM", 0xC8, 1));
+addBytecode(new SicBytecode("OR", 0x44, 3));
+addBytecode(new SicBytecode("RD", 0xD8, 3));
+addBytecode(new SicBytecode("RMO", 0xAC, 2));
+addBytecode(new SicBytecode("RSUB", 0x4C, 3));
+addBytecode(new SicBytecode("SHIFTL", 0xA4, 2));
+addBytecode(new SicBytecode("SHIFTR", 0xA8, 2));
+addBytecode(new SicBytecode("SIO", 0xF0, 1));
+addBytecode(new SicBytecode("SSK", 0xEC, 3));
+addBytecode(new SicBytecode("STA", 0x0C, 3));
+addBytecode(new SicBytecode("STB", 0x78, 3));
+addBytecode(new SicBytecode("STCH", 0x54, 3));
+addBytecode(new SicBytecode("STF", 0x80, 3));
+addBytecode(new SicBytecode("STI", 0xD4, 3));
+addBytecode(new SicBytecode("STS", 0x7C, 3));
+addBytecode(new SicBytecode("STSW", 0xE8, 3));
+addBytecode(new SicBytecode("STT", 0x84, 3));
+addBytecode(new SicBytecode("STX", 0x10, 3));
+addBytecode(new SicBytecode("SUB", 0x1C, 3));
+addBytecode(new SicBytecode("SUBF", 0x5C, 3));
+addBytecode(new SicBytecode("SUBR", 0x94, 2));
+addBytecode(new SicBytecode("SVC", 0xB0, 2));
+addBytecode(new SicBytecode("TD", 0xE0, 3));
+addBytecode(new SicBytecode("TIO", 0xF8, 1));
+addBytecode(new SicBytecode("TIX", 0x2C, 3));
+addBytecode(new SicBytecode("TIXR", 0xB8, 2));
+addBytecode(new SicBytecode("WD", 0xDC, 3));
 
 /**
  * Represents a base-relative value.
@@ -389,8 +427,8 @@ export class SicOperandAddr {
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
 		// Matches a hexadecimal argument (@X'1ABC')
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
-		// Matches a single character argument (@'Q')
-		const reChar = new RegExp("^(=|#|@)?C'(.)'(,X)?$");
+		// Matches up to 3 characters in an argument (@'EOF')
+		const reChar = new RegExp("^(=|#|@)?C'(.{1,3})'(,X)?$");
 		// Matches a label argument (@VAL)
 		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
 
@@ -458,7 +496,18 @@ export class SicOperandAddr {
 			}
 		}
 		else if ((match = arg.match(reChar)) !== null) {
-			const x = match[2].charCodeAt(0);
+			// convert string into byte array
+			let bytes = [];
+			for (let i = 0; i < match[2].length; ++i) {
+				bytes.push(match[2].charCodeAt(i));
+			}
+			while (bytes.length < 3) {
+				bytes = [0].concat(bytes);
+			}
+
+			// now convert byte array into a word
+			const x = (bytes[0] << 16) + (bytes[1] << 8) + (bytes[2]);
+
 			// If the argument is a literal.
 			if (isLiteral(match[1])) {
 				// Add this literal to the pending list if it is not already there.
@@ -507,63 +556,85 @@ export class SicOperandAddr {
 	/**
 	 * If this SicOperandAddr is not ready, this method makes it ready.
 	 * @param pc The current program counter when the corresponding instruction is executed.
-	 * This is equal to the current line of code + the length of this instruction.
+	 * This is equal to the current locctr + the length of this instruction.
 	 * @param tagTab A hashtable mapping labels to their corresponding lines of code.
 	 * @param litTab A SicLitTab mapping literals to their corresponding lines of code.
 	 */
 	public makeReady(pc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+		// Return if this is already ready.
 		if (this.rdy) {
 			return;
 		}
 
+		// If there is a base, make it ready.
 		if (this.base !== undefined && !this.base.ready()) {
 			this.base.makeReady(tagTab);
 		}
 
+		// If this val is a SicPending
 		if (typeof this.val !== "number") {
+			// Convert it to a numeric value.
 			this.val = (this.val as SicPending).convert(tagTab, litTab);
 		}
 
-		let maxAddr: number;
+		// get the correct operand length for the corresponding opcode
+		let opLen: number;
 		switch (this.type) {
 			case SicOpType.f3:
-				maxAddr = 12;
+				opLen = 12;
 				break;
 			case SicOpType.legacy:
-				maxAddr = 15;
+				opLen = 15;
 				break;
 			case SicOpType.f4:
-				maxAddr = 20;
+				opLen = 20;
 				break;
 			default:
 				throw new Error("type is not valid");
 		}
 
+		// first try pcrel if it is available
 		if (this.pcrel) {
 			try {
-				this.val = sicMakeUnsigned(this.val - pc, maxAddr);
+				this.val = sicMakeUnsigned(this.val - pc, opLen);
 				this.rdy = true;
 				return;
 			}
+			// if the value cannot fit in a 12-bit signed range
 			catch (e) {
+				// disable pcrel
 				this.pcrel = false;
 			}
 		}
+		// then try baserel if it is available
 		if (this.base) {
 			try {
-				this.val = sicMakeUnsigned(this.val - (this.base.val as number), maxAddr);
+				this.val = sicMakeUnsigned(this.val - (this.base.val as number), opLen);
 				this.rdy = true;
 				return;
 			}
+			// if the baserel displacement is too high
 			catch (e) {
+				// disable baserel
 				this.base = undefined;
 			}
 		}
-		sicCheckUnsigned(this.val, maxAddr);
+
+		// finally try direct addressing
+		sicCheckUnsigned(this.val, opLen);
 		this.rdy = true;
 	}
 
+	/**
+	 * Returns two bytes corresponding to the nixbpe of this value.
+	 * They will have the following format:
+	 * [000000ni, xbpe0000]
+	 */
 	public nixbpe(): number[] {
+		if (!this.ready()) {
+			throw new Error("nixbpe() can only be called when the value is ready.");
+		}
+
 		let n: boolean;
 		let i: boolean;
 		const x = this.indexed;
@@ -573,8 +644,15 @@ export class SicOperandAddr {
 
 		switch (this.addr) {
 			case SicOpAddrType.direct:
-				n = true;
-				i = true;
+				// n false and i false correspond to a SIC legacy instruction
+				if (this.type === SicOpType.legacy) {
+					n = false;
+					i = false;
+				}
+				else {
+					n = true;
+					i = true;
+				}
 				break;
 			case SicOpAddrType.indirect:
 				n = true;
@@ -611,21 +689,51 @@ export class SicOperandAddr {
 	}
 }
 
+/**
+ * Interface detailing the methods any bytecode-representable instruction needs to have.
+ */
 interface ISicInstruction {
+	/**
+	 * Returns true if this instruction is ready to be used, false if not.
+	 */
 	ready(): boolean;
+	/**
+	 * Returns the length in bytes of this instruction.
+	 */
 	length(): number;
+	/**
+	 * Converts this instruction into an array of bytes.
+	 */
 	toBytes(): number[];
+	/**
+	 * If this instruction is not ready, this method makes it ready.
+	 * @param loc The current locctr. Note that this is not the current program counter.
+	 * @param tagTab A hashtable mapping labels to their lines of code.
+	 * @param litTab A SicLitTab mapping literals to their lines of code.
+	 */
 	makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void;
 }
 
+/**
+ * Class corresponding to a Format 1 instruction.
+ */
 export class SicFormat1 implements ISicInstruction {
+	/**
+	 * Returns true if the give mnemonic corresponds to a Format 1 instruction.
+	 */
 	public static isFormat1(mnemonic: string): boolean {
 		const bc = bytecodeTable[mnemonic];
 		return bc !== undefined && bc.format === 1;
 	}
 
+	/**
+	 * The opcode of this instruction.
+	 */
 	public bc: SicBytecode;
 
+	/**
+	 * Constructs a SicFormat1 from the given line of code.
+	 */
 	constructor(line: SicSplit) {
 		if (!SicFormat1.isFormat1(line.op)) {
 			throw new Error(line.op + " is not a format 1 operation");
@@ -636,48 +744,83 @@ export class SicFormat1 implements ISicInstruction {
 		this.bc = bytecodeTable[line.op];
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * This returns true because there are no arguments for a format 1 instruction.
+	 */
 	public ready(): boolean {
 		return true;
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * This is a no-op because there are no arguments for a format 1 instruction.
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
 		return;
 	}
 
+	/**
+	 * The length of a format 1 instruction is always 1 byte.
+	 */
 	public length(): number {
 		return 1;
 	}
 
+	/**
+	 * Converts this instruction into its corresponding bytecode.
+	 */
 	public toBytes(): number[] {
 		return [this.bc.opcode];
 	}
 }
 
+/**
+ * A class representing a format 2 instruction.
+ */
 export class SicFormat2 implements ISicInstruction {
+	/**
+	 * Returns true if a given mnemonic is a format 2 instruction.
+	 */
 	public static isFormat2(mnemonic: string) {
 		const bc = bytecodeTable[mnemonic];
 		return bc !== undefined && bc.format === 2;
 	}
 
+	/** The opcode. */
 	public bc: SicBytecode;
+	/** The first operand. Format 2 instructions cannot use labels or literals. */
 	public op1: number;
+	/** The second operand. */
 	public op2: number;
 
+	/**
+	 * Constructs a SicFormat2 from the given line of code.
+	 */
 	constructor(line: SicSplit) {
 		if (!SicFormat2.isFormat2(line.op)) {
 			throw new Error(line.op + " is not a format 2 opcode");
 		}
 		this.bc = bytecodeTable[line.op];
 
+		// The two operands to a format 2 instruction are seperated by a comma.
 		const s = line.args.trim().split(/\s*,\s*/);
+		// If there is only one operand (CLEAR A).
+		if (s.length === 1) {
+			// Add a dummy 0 argument.
+			s.push("0");
+		}
+		// If we don't have 2 arguments at this point.
 		if (s.length !== 2) {
-			throw new Error("Args needs to have 2 and only 2 values.");
+			throw new Error("This format 2 instruction has an invalid number of operands.");
 		}
 
 		const matcher = (str: string): number => {
-			const reIndexed = new RegExp("^(.+),X$");
+			// Matches a register argument.
 			const reRegister = new RegExp("^(A|X|L|PC|SW|B|S|T|F)$");
+			// Matches a hexadecimal argument.
 			const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
+			// Matches a decimal argument.
 			const reDec = new RegExp("^([0-9]+)$");
 			let match: RegExpMatchArray | null;
 
@@ -693,42 +836,72 @@ export class SicFormat2 implements ISicInstruction {
 			throw new Error(str + " is not a valid format 2 operand.");
 		};
 
+		// Make sure that each operand fits in an unsigned 4-bit range.
 		this.op1 = matcher(s[0]);
 		sicCheckUnsigned(this.op1, 4);
 		this.op2 = matcher(s[1]);
 		sicCheckUnsigned(this.op2, 4);
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * Format 2 instructions cannot use labels or literals, so this is always true.
+	 */
 	public ready(): boolean {
 		return true;
 	}
 
+	/**
+	 * Required for the ISicInstruction implemtnation.
+	 * Format 2 instructions cannot use labels or literals, so this is a no-op.
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
 		return;
 	}
 
+	/**
+	 * Format 2 instructions are always 2 bytes in length.
+	 */
 	public length(): number {
 		return 2;
 	}
 
+	/**
+	 * Converts this SicFormat2 into ts corresponding bytecode representation.
+	 */
 	public toBytes(): number[] {
 		const bytes = [0x00, 0x00];
+		// first byte is just the opcode.
 		bytes[0] = this.bc.opcode;
+		// first 4 bits of second byte are the first operand
 		bytes[1] |= (this.op1 & 0x0F) << 4;
+		// last 4 bits of second byte are the second operand
 		bytes[1] |= (this.op2 & 0x0F);
 		return bytes;
 	}
 }
 
+/**
+ * Class that represents a format 3 instruction.
+ */
 export class SicFormat3 implements ISicInstruction {
+	/**
+	 * Returns true if the given mnemonic corresponds to a format 3 instruction.
+	 */
 	public static isFormat3(mnemonic: string): boolean {
 		const bc = bytecodeTable[mnemonic];
 		return bc !== undefined && bc.format === 3;
 	}
 
+	/** The opcode */
 	public bc: SicBytecode;
+	/** The operand */
 	public op: SicOperandAddr;
 
+	/**
+	 * Constructs a SicFormat3 out of a given line of code.
+	 * @constructor
+	 */
 	constructor(line: SicSplit, litSet: SicLitTab, baserel?: SicBase) {
 		if (!SicFormat3.isFormat3(line.op)) {
 			throw new Error(line.op + " is not format 3");
@@ -738,87 +911,151 @@ export class SicFormat3 implements ISicInstruction {
 		this.op = new SicOperandAddr(line.args, SicOpType.f3, litSet, baserel);
 	}
 
+	/**
+	 * If the operand is not ready, this function makes it ready.
+	 * @see SicOperandAddr.makeReady
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+		// loc + 3 === pc
 		this.op.makeReady(loc + 3, tagTab, litTab);
 	}
 
+	/**
+	 * Returns true if the operand is ready.
+	 */
 	public ready(): boolean {
 		return this.op.ready();
 	}
 
+	/**
+	 * A format 3 instruction is always 3 bytes in length.
+	 */
 	public length(): number {
 		return 3;
 	}
 
+	/**
+	 * Converts this SicFormat3 to its corresponding bytecode.
+	 */
 	public toBytes(): number[] {
 		if (!this.ready()) {
-			throw new Error("MY BODY IS NOT READY");
+			throw new Error("Internal error: This SicFormat3 instruction is not ready.");
 		}
+		// get this operand's nixbpe
 		const bytes = this.op.nixbpe();
+		// place the opcode in the first 6 bits of the first byte
 		bytes[0] |= (this.bc.opcode & 0xFC);
+		// place the first 4 bits of the address in the last 4 bits of the second byte
 		bytes[1] |= ((this.op.val as number) & 0x0F00) >>> 8;
+		// set the last byte equal to the last 8 bits of the address
 		bytes[2] = ((this.op.val as number) & 0xFF);
 		return bytes;
 	}
 }
 
+/**
+ * Class representing a SIC legacy instruction (*LDA)
+ */
 export class SicFormatLegacy implements ISicInstruction {
+	/**
+	 * Returns true if the given mnenomic corresponds to a SIC legacy instruction.
+	 */
 	public static isFormatLegacy(mnemonic: string): boolean {
+		// Mnemonic must start with a *.
 		if (mnemonic.charAt(0) !== "*") {
 			return false;
 		}
+		// Check if the rest of the string corresponds to a format 3 instruction.
 		const bc = bytecodeTable[mnemonic.slice(1)];
 		return bc !== undefined && bc.format === 3;
 	}
 
+	/** The opcode */
 	public bc: SicBytecode;
+	/** The operand */
 	public op: SicOperandAddr;
 
+	/**
+	 * Constructs a SicFormatLegacy out of a given line of code.
+	 */
 	constructor(line: SicSplit, litList: SicLitTab) {
 		if (!SicFormatLegacy.isFormatLegacy(line.op)) {
 			throw new Error(line.op + " is not SIC legacy format");
 		}
 
-		this.bc = bytecodeTable[line.op];
+		this.bc = bytecodeTable[line.op.slice(1)];
 		this.op = new SicOperandAddr(line.args, SicOpType.legacy, litList);
 	}
 
+	/**
+	 * Makes the operand ready if it is not already.
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+		// loc + this.length() === pc
 		this.op.makeReady(loc + this.length(), tagTab, litTab);
 	}
 
+	/**
+	 * Returns true if the operand is ready.
+	 */
 	public ready(): boolean {
 		return this.op.ready();
 	}
 
+	/**
+	 * SIC legacy instructions are always 3-bytes in length.
+	 */
 	public length(): number {
 		return 3;
 	}
 
+	/**
+	 * Converts this SicFormatLegacy into its corresponding bytecode.
+	 */
 	public toBytes(): number[] {
 		if (!this.ready()) {
-			throw new Error("MY BODY IS NOT READY");
+			throw new Error("Internal error: This SicFormatLegacy instruction is not ready.");
 		}
+		// Get the nixbpe for this operand.
 		const bytes = this.op.nixbpe();
+		// Place the opcode in the first 6 bits of the first byte.
 		bytes[0] |= (this.bc.opcode & 0xFC);
-		bytes[1] |= ((this.op.val as number) & 0x0F00) >>> 8;
+		// Place the first 7 bits of the address into the last 7 bits of the second byte.
+		bytes[1] |= ((this.op.val as number) & 0x7F00) >>> 8;
+		// Place the last 8 bits of the address into the third byte.
 		bytes[2] = ((this.op.val as number) & 0xFF);
 		return bytes;
 	}
 }
 
+/**
+ * Class representing a Format 4 instruction.
+ */
 export class SicFormat4 implements ISicInstruction {
+	/**
+	 * Returns true if the given mnemonic corresponds to a format 4 instruction.
+	 */
 	public static isFormat4(mnemonic: string): boolean {
+		// first character has to be a "+".
 		if (mnemonic.charAt(0) !== "+") {
 			return false;
 		}
+		// check if the rest of the string corresponds to a format 3 instruction.
 		const bc = bytecodeTable[mnemonic.slice(1)];
 		return bc !== undefined && bc.format === 3;
 	}
 
+	/** The opcode */
 	public bc: SicBytecode;
+	/** The operand */
 	public op: SicOperandAddr;
 
+	/**
+	 * Constructs a SicFormat4 out of the given line of code.
+	 * @constructor
+	 * @param line The line of code to convert.
+	 * @param litList The current literal tab in use.
+	 */
 	constructor(line: SicSplit, litList: SicLitTab) {
 		if (!SicFormat4.isFormat4(line.op)) {
 			throw new Error(line.op + " is not format 4");
@@ -828,64 +1065,107 @@ export class SicFormat4 implements ISicInstruction {
 		this.op = new SicOperandAddr(line.args, SicOpType.f4, litList);
 	}
 
+	/**
+	 * Makes the operand ready if it is not already.
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+		// loc + this.length() === pc
 		this.op.makeReady(loc + this.length(), tagTab, litTab);
 	}
 
+	/**
+	 * Returns true if the operand is ready.
+	 */
 	public ready(): boolean {
 		return this.op.ready();
 	}
 
+	/**
+	 * Format 4 instructions are always 4 bytes in length.
+	 */
 	public length(): number {
 		return 4;
 	}
 
+	/**
+	 * Converts this SicFormat4 into its bytecode representation.
+	 */
 	public toBytes(): number[] {
 		if (!this.ready()) {
-			throw new Error("MY BODY IS NOT READY");
+			throw new Error("Internal error: This SicFormat4 instruction is not ready.");
 		}
+		// get the nixbpe
 		const bytes = this.op.nixbpe();
+		// place the opcode into the first 6 bits of the first byte
 		bytes[0] |= (this.bc.opcode & 0xFC);
+		// place the first 4 bits of the address into the last 4 bits of the second byte
 		bytes[1] |= ((this.op.val as number) & 0x0F0000) >>> 16;
+		// place the middle and last 8 bits into the 3rd and 4th bytes respectively
 		bytes[2] = ((this.op.val as number) & 0xFF00) >>> 8;
 		bytes[3] = ((this.op.val as number) & 0xFF);
 		return bytes;
 	}
 }
 
+/**
+ * Class that represents a WORD/BYTE.
+ */
 export class SicSpace implements ISicInstruction {
+	/**
+	 * Returns true if the given mnemonic corresponds to a space.
+	 */
 	public static isSpace(mnemonic: string): boolean {
 		const re = new RegExp("^(WORD|BYTE)$");
 		return re.test(mnemonic);
 	}
 
+	/**
+	 * Splits a number into bytes.
+	 * @param n The number to split. It must fit in a 24-bit unsigned range.
+	 * @returns The given number as a byte array.
+	 */
 	public static splitWord(n: number): number[] {
 		sicCheckUnsigned(n, 24);
 		return [(n & 0xFF0000) >>> 16, (n & 0xFF00) >>> 8, (n & 0xFF)];
 	}
 
+	/** WORD | BYTE */
 	public mnemonic: string;
+	/** The bytes of this SicSpace */
 	public arg: number[];
 
+	/**
+	 * Constructs a SicSpace out of the given line of code.
+	 * @constructor
+	 * @param line The line of code to parse.
+	 */
 	constructor(line: SicSplit) {
 		if (!SicSpace.isSpace(line.op)) {
 			throw new Error("This mnemonic is not a space.");
 		}
 		this.mnemonic = line.op;
-		const reDec = new RegExp("^(\\d+)$");
-		const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
-		const reChar = new RegExp("^C'(.+)'$");
-		let match: RegExpMatchArray | null;
 
+		// matches a decimal argument
+		const reDec = new RegExp("^(\\d+)$");
+		// matches a hexadecimal argument
+		const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
+		// matches a string
+		const reChar = new RegExp("^C'(.+)'$");
+
+		let match: RegExpMatchArray | null;
 		if ((match = line.args.match(reDec)) !== null) {
+			// convert the decimal to a byte array using splitWord
 			this.arg = SicSpace.splitWord(parseInt(match[1], 10));
 		}
 		else if ((match = line.args.match(reHex)) !== null) {
+			// convert the hex to a byte array using splitWord
 			this.arg = SicSpace.splitWord(parseInt(match[1], 16));
 		}
 		else if ((match = line.args.match(reChar)) !== null) {
 			this.arg = [];
+			// for each character in the string
 			for (let i = 0; i < match[1].length; ++i) {
+				// push its ascii value
 				this.arg.push(match[1].charCodeAt(i));
 			}
 		}
@@ -894,17 +1174,30 @@ export class SicSpace implements ISicInstruction {
 		}
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * SicSpace instructions cannot use pending values so they are always ready.
+	 */
 	public ready(): boolean {
 		return true;
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation
+	 * SicSpace instructions cannot use pending values so this function is a no-op.
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
 		return;
 	}
 
+	/**
+	 * Returns the length of this SicSpace in bytes.
+	 */
 	public length(): number {
 		switch (this.mnemonic) {
 			case "WORD":
+				// The first word must be padded to 3 bytes in length,
+				// so the length in bytes is the next highest divisible by 3.
 				return this.arg.length + (this.arg.length % 3 !== 0 ? 1 : 0);
 			case "BYTE":
 				return this.arg.length;
@@ -913,14 +1206,20 @@ export class SicSpace implements ISicInstruction {
 		}
 	}
 
+	/**
+	 * Converts this SicSpace into a byte array.
+	 */
 	public toBytes(): number[] {
 		const a: number[] = [];
 		switch (this.mnemonic) {
 			case "WORD":
+				// the first word must be padded to 3 bytes in length
 				for (let i = 0; i < this.arg.length % 3; ++i) {
 					a.push(0x00);
 				}
+				// push the rest of the bytes as usual
 				this.arg.forEach(val => a.push(val));
+				return a;
 			case "BYTE":
 				return this.arg;
 			default:
@@ -929,35 +1228,80 @@ export class SicSpace implements ISicInstruction {
 	}
 }
 
+/**
+ * The most basic ISicInstruction. It just stores a word.
+ * This is needed for LTORG.
+ */
 export class SicLiteral implements ISicInstruction {
+	/** The word */
 	private val: number;
 
+	/**
+	 * Constructs a SicLiteral
+	 * @constructor
+	 */
 	constructor(val: number) {
 		this.val = val;
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * Words are always 3 bytes in length.
+	 */
 	public length(): number {
 		return 3;
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * Words are always ready.
+	 */
 	public ready(): boolean {
 		return true;
 	}
 
+	/**
+	 * Required for the ISicInstruction implementation.
+	 * This is a no-op.
+	 */
 	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
 		return;
 	}
 
+	/**
+	 * Converts the word to a byte array.
+	 */
 	public toBytes(): number[] {
 		return SicSpace.splitWord(this.val);
 	}
 }
 
+/**
+ * Class that represents a processed line of code.
+ */
 export class SicLstEntry {
+	/** The verbatim source code that made this instruction. */
 	public source: string;
+	/**
+	 * The bytecode data of this instruction.
+	 * This can be undefined if this source line does not have a locctr.
+	 * @property aloc The absolute line of code of this lst.
+	 * @property rloc The relative (USE tab) line of code of this lst.
+	 * @property inst The generated instruction. This can be undefined if this lst does not have an instruction.
+	 */
 	public bcData: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | undefined;
+	/** The error message if there is one, or undefined if not. */
 	public errmsg: string | undefined;
 
+	/**
+	 * Constructs a SicLstEntry
+	 * @constructor
+	 * @param source The verbatim source code that made this instruction.
+	 * @param bcData If this is a string, then it corresponds to an error message.
+	 * Otherwise it corresponds to bytecode data.
+	 * This can be omitted if the instruction does not have bytecode data.
+	 * @see bcData
+	 */
 	constructor(source: string, bcData?: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | string) {
 		this.source = source;
 		if (typeof bcData === "string") {
@@ -970,10 +1314,16 @@ export class SicLstEntry {
 		}
 	}
 
+	/**
+	 * Returns true if this lst has an instruction.
+	 */
 	public hasInstruction(): boolean {
 		return this.bcData !== undefined && this.bcData.inst !== undefined;
 	}
 
+	/**
+	 * Returns the bytecode of this lst if it exists (this.hasInstruction()).
+	 */
 	public byteCode(): number[] {
 		if (!(this.bcData !== undefined && this.bcData.inst !== undefined)) {
 			throw new Error("This SicLstEntry does not have an instruction in it");
@@ -981,23 +1331,45 @@ export class SicLstEntry {
 		return this.bcData.inst.toBytes();
 	}
 
+	/**
+	 * Returns a string representation of the bytecode of this lst if it exists.
+	 */
 	public byteString(): string {
-		if (this.bcData === undefined || this.bcData.inst === undefined) {
-			throw new Error("Cannot make a byteString() if there is no instruction.");
-		}
-		return bytesToString(this.bcData.inst.toBytes());
+		return bytesToString(this.byteCode());
 	}
 }
 
+/**
+ * Class that corresponds to a literal tab for use with LTORG.
+ */
 export class SicLitTab {
+	/**
+	 * An array of already placed literals.
+	 * @property loc The line of code this literal is placed on.
+	 * @property val The value of the literal.
+	 */
 	public ltorgs: Array<{ loc: number, val: number }>;
+
+	/**
+	 * A set of literals that have not yet been placed in the code with LTORG.
+	 */
 	private pending: Set<number>;
 
+	/**
+	 * Constructs a new SicLitTab.
+	 * @constructor
+	 */
 	constructor() {
 		this.ltorgs = [];
 		this.pending = new Set<number>();
 	}
 
+	/**
+	 * Gets the closest line of code corresponding to a literal.
+	 * @param n The number you are trying to match.
+	 * @param pc The current program counter. If this is not specified it defaults to 0.
+	 * @returns The closest literal to pc, or null if none exist.
+	 */
 	public getLitLoc(n: number, pc: number = 0): number | null {
 		let diffMin = Number.MAX_SAFE_INTEGER;
 		let loc: number | null = null;
@@ -1010,6 +1382,11 @@ export class SicLitTab {
 		return loc;
 	}
 
+	/**
+	 * Creates an LTORG at the given locctr.
+	 * @param loc The current locctr to place the LTORG at.
+	 * @returns An array containing the contents of the new LTORG.
+	 */
 	public createOrg(loc: number): Array<{ loc: number, val: number }> {
 		let l = loc;
 		const m: Array<{ loc: number, val: number }> = [];
@@ -1022,12 +1399,19 @@ export class SicLitTab {
 		return m;
 	}
 
+	/**
+	 * Adds a new pending literal if it does not currently exist in the set.
+	 */
 	public add(n: number): void {
 		if (this.getLitLoc(n) === null) {
 			this.pending.add(n);
 		}
 	}
 
+	/**
+	 * Returns true if the pending list has the specified number.
+	 * If no argument is given, this returns true if there are any literals pending.
+	 */
 	public hasPending(n?: number): boolean {
 		if (n === undefined) {
 			return this.pending.size > 0;
@@ -1036,32 +1420,72 @@ export class SicLitTab {
 	}
 }
 
+/**
+ * A class corresponding to a USE table.
+ * This keeps track of the current relative and absolute lines of code.
+ */
 export class SicUseTab {
+	/**
+	 * A hashtable containing previous USEs and their last lines of code.
+	 */
 	public useTab: { [key: string]: number };
+	/**
+	 * The current USE as a string.
+	 */
 	public currentUse: string;
+	/**
+	 * The starting locctr of the program.
+	 * This should be kept constant.
+	 */
 	private startloc: number;
+	/**
+	 * A private variable containing the current relative locctr.
+	 * This should only be accessed through the .rloc getter.
+	 */
 	private RLOC: number;
+	/**
+	 * A private variable containing the current absolute locctr.
+	 * This should only be accessed through the .aloc getter.
+	 */
 	private ALOC: number;
 
+	/**
+	 * Constructs a new SicUseTab at the given starting locctr.
+	 */
 	constructor(startloc: number) {
 		this.ALOC = this.RLOC = this.startloc = startloc;
 		this.useTab = {};
+		// "" is the default USE block.
 		this.currentUse = "";
 	}
 
+	/**
+	 * Returns the absolute locctr.
+	 * This is the actual location the code will occupy when turned into bytecode.
+	 */
 	public get aloc(): number {
 		return this.ALOC;
 	}
 
+	/**
+	 * Returns the relative locctr.
+	 * This is the cosmetic location the USE block reports.
+	 */
 	public get rloc(): number {
 		return this.RLOC;
 	}
 
+	/**
+	 * Increments the locctr by the given value.
+	 */
 	public inc(n: number): void {
 		this.RLOC += n;
 		this.ALOC += n;
 	}
 
+	/**
+	 * Switches the USE block to one of the given label.
+	 */
 	public use(label: string) {
 		this.useTab[this.currentUse] = this.RLOC;
 		this.currentUse = label;
@@ -1073,15 +1497,33 @@ export class SicUseTab {
 	}
 }
 
+/**
+ * Class that compiles raw source code into LST and OBJ formats.
+ */
 export class SicCompiler {
+	/** The processed lines of code. */
 	private lst: SicLstEntry[];
+	/**
+	 * If a START directive is given, its data will show up here.
+	 * @property name The label given to start.
+	 * @property loc The locctr given to start.
+	 */
 	private startData: { name: string, loc: number } | undefined;
 
+	/** The literal tab in use. */
 	private litTab: SicLitTab;
+	/** The label tab in use. This is a hashtable mapping strings to numbers. */
 	private tagTab: { [key: string]: number };
+	/** The EQU tab in use. This is a hashtable mapping strings to strings. */
 	private equTab: { [key: string]: string };
+	/** The USE tab / locctr tracker. */
 	private useTab: SicUseTab;
 
+	/**
+	 * Constructs a SicCompiler and compiles the code.
+	 * @constructor
+	 * @param lines The lines of code to compile.
+	 */
 	constructor(lines: string[]) {
 		let baserel: SicBase | undefined;
 
@@ -1091,6 +1533,9 @@ export class SicCompiler {
 		this.useTab = new SicUseTab(0);
 		this.litTab = new SicLitTab();
 
+		/**
+		 * Parses a numeric argument as decimal, hexadecimal, or character.
+		 */
 		const parseNum = (val: string): number => {
 			const reDec = new RegExp("^(\\d+)$");
 			const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
@@ -1105,6 +1550,7 @@ export class SicCompiler {
 			}
 			if ((match = val.match(reChar)) !== null) {
 				let x = 0;
+				// i have no idea how this works lmao
 				for (let ptr = 0, s = match[1]; s !== ""; ptr += 8, s = s.slice(0, -1)) {
 					x += s.charCodeAt(s.length - 1) << ptr;
 				}
@@ -1113,26 +1559,38 @@ export class SicCompiler {
 			throw new Error(val + " was not of a valid numeric format.");
 		};
 
+		// Contains the compiler directive functions.
+		// This is a hashtable mapping strings to functions.
+		// For example, to use the RESW directive, call it like `directiveOps["RESW"](source, split);`
 		const directiveOps: { [key: string]: (source: string, split: SicSplit) => void } = {
 			RESW: (source: string, split: SicSplit): void => {
+				// Make a new lst entry containing locctrs, but no instruction.
+				// This is so this RESW can be jumped to.
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+				// Increment locctr by the correct amount of bytes.
 				this.useTab.inc(3 * parseNum(split.args));
 			},
 
 			RESB: (source: string, split: SicSplit): void => {
+				// Make a new lst entry containing locctrs, but no instruction.
+				// This is so this RESB can be jumped to.
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
+				// Increment locctr by the correct amount of bytes.
 				this.useTab.inc(parseNum(split.args));
 			},
 
+			// TODO fix bug where START can be used multiple times if starting locctr === 0
 			START: (source: string, split: SicSplit): void => {
 				if (this.useTab.aloc !== 0) {
 					throw new Error("START can only be used as the first line of a program.");
 				}
+				// START arguments are always hexadecimal
 				this.useTab = new SicUseTab(parseInt(split.args, 16));
 				this.lst.push(new SicLstEntry(source, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: undefined }));
 				this.startData = { name: split.tag, loc: this.useTab.aloc };
 			},
 
+			// TODO fix bug where this doesn't have to be the final line of code.
 			END: (source: string, split: SicSplit): void => {
 				if ((this.startData === undefined && split.args !== "") ||
 					(this.startData !== undefined && split.args !== this.startData.name)) {
@@ -1145,6 +1603,7 @@ export class SicCompiler {
 				try {
 					baserel = new SicBase(parseNum(split.args));
 				}
+				// the operand is not numeric, meaning it is a label
 				catch (e) {
 					baserel = new SicBase(new SicPending(split.args));
 				}
@@ -1185,6 +1644,7 @@ export class SicCompiler {
 			},
 		};
 
+		// Returns true if a mnemonic corresponds to a compiler directive.
 		const isDirective = (val: string) => directiveOps[val] !== undefined;
 
 		// pass 1
@@ -1206,20 +1666,25 @@ export class SicCompiler {
 					if (split.args.match(key) === null) {
 						continue;
 					}
+					// keep replacing EQU like the prototype chain
 					for (let s: string | undefined = this.equTab[key]; s !== undefined; s = this.equTab[s]) {
 						split.args = split.args.replace(key, this.equTab[key]);
 					}
 					break;
 				}
 
+				// if this line has a label, add it to the label tab
 				if (split.tag !== undefined) {
 					this.tagTab[split.tag] = this.useTab.aloc;
 				}
 
+				// if this line is a directive, process the directive and continue.
 				if (isDirective(split.op)) {
 					directiveOps[split.op](val, split);
 					return;
 				}
+
+				// create the line of code
 
 				if (SicFormat1.isFormat1(split.op)) {
 					instr = new SicFormat1(split);
@@ -1243,10 +1708,14 @@ export class SicCompiler {
 					throw new Error(split.op + " is not a valid mnemonic.");
 				}
 
+				// add the instruction to the lst
 				this.lst.push(new SicLstEntry(val, { aloc: this.useTab.aloc, rloc: this.useTab.rloc, inst: instr }));
+				// increment usetab accordingly
 				this.useTab.inc(instr.length());
 			}
+			// if there was an error
 			catch (e) {
+				// report it
 				this.lst.push(new SicLstEntry(val, (e as Error).message));
 			}
 		});
@@ -1258,12 +1727,16 @@ export class SicCompiler {
 
 		// pass 2
 		this.lst.forEach(l => {
+			// make all pending instructions ready
 			if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
 				l.bcData.inst.makeReady(l.bcData.aloc, this.tagTab, this.litTab);
 			}
 		});
 	}
 
+	/**
+	 * Creates an LST out of the processed lines of code.
+	 */
 	public makeLst(): string[] {
 		const s = ["n"];
 		s[0] = "n    \taloc \trloc \tbytecode\tsource";
@@ -1277,14 +1750,23 @@ export class SicCompiler {
 			const istr = asHex(i);
 			++i;
 
-			return istr.padEnd(5, " ") + "\t" +
+			let msg = istr.padEnd(5, " ") + "\t" +
 				astr.padEnd(5, " ") + "\t" +
 				rstr.padEnd(5, " ") + "\t" +
 				inststr.padEnd(8, " ") + "\t" +
 				ls.source;
+
+			if (ls.errmsg !== undefined) {
+				msg += "\n*error: " + ls.errmsg + "*";
+			}
+
+			return msg;
 		}));
 	}
 
+	/**
+	 * Creates an OBJ out of the lines of code.
+	 */
 	public makeObj(): string[] {
 		const s: string[] = [];
 
@@ -1319,11 +1801,17 @@ export class SicCompiler {
 		return s;
 	}
 
+	/**
+	 * Converts the lines of code to raw bytes.
+	 */
 	public toBytes(): number[][] {
 		return this.lst.filter(l => l.hasInstruction()).map(l => l.byteCode());
 	}
 }
 
+/**
+ * Converts a register name to a numeric value.
+ */
 export const sicRegToDec = (reg: string): number => {
 	switch (reg) {
 		case "A":
@@ -1349,6 +1837,9 @@ export const sicRegToDec = (reg: string): number => {
 	}
 };
 
+/**
+ * Converts a numeric value to a register name.
+ */
 export const sicDecToReg = (reg: number): string => {
 	switch (reg) {
 		case 0:

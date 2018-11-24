@@ -291,7 +291,7 @@ describe("SicFormat2 tests", () => {
 	});
 
 	it("throws on invalid format2 arguments", () => {
-		const splitBad1 = new cc.SicSplit("\tSHIFTL B");
+		const splitBad1 = new cc.SicSplit("\tSHIFTL");
 		const splitBad2 = new cc.SicSplit("\tLDA B, 4");
 		expect(() => new cc.SicFormat2(splitBad1)).to.throw();
 		expect(() => new cc.SicFormat2(splitBad2)).to.throw();

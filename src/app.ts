@@ -9,7 +9,7 @@ import * as cc from "./sicxe_cc";
 
 const lm = (id: string): HTMLElement => {
 	const e = document.getElementById(id);
-	if (e == null){
+	if (e == null) {
 		throw new Error("Element " + id + " was not found in the DOM");
 	}
 	return e;
@@ -17,7 +17,7 @@ const lm = (id: string): HTMLElement => {
 
 const onKeyDown = (e: any) => {
 	// if tab was pressed
-	if (e.keyCode === 9){
+	if (e.keyCode === 9) {
 		// do not tab out of the editor
 		e.preventDefault();
 
@@ -56,7 +56,7 @@ lm("button_run").onclick = (): void => {
 	try {
 		const arr = textToArray(lm("editor").innerText);
 		const comp = new cc.SicCompiler(arr);
-		lm("output").innerText = arrayToText(comp.lstReport());
+		lm("output").innerText = arrayToText(comp.makeLst());
 	}
 	catch (e) {
 		alert((e as Error).message);
