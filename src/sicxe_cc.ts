@@ -1802,7 +1802,7 @@ export class SicCompiler {
 		});
 
 		// E record
-		s.push("E" + asWord(loc));
+		s.push("E" + (this.startData !== undefined ? asWord(loc) : ""));
 
 		return s;
 	}
