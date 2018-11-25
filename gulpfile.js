@@ -43,7 +43,7 @@ gulp.task("bundle", function() {
     var bundler = browserify({
         debug: true,
         standalone: libraryName
-    });
+    }).ignore(["ace", "jquery"]);
 
     return bundler.add(mainTsFilePath)
         .bundle()

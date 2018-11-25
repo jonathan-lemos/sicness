@@ -5,37 +5,15 @@
  * of the MIT license.  See the LICENSE file for details.
 */
 
+import "ace";
+import "jquery";
 import * as cc from "./sicxe_cc";
 
-const lm = (id: string): HTMLElement => {
-	const e = document.getElementById(id);
-	if (e == null) {
-		throw new Error("Element " + id + " was not found in the DOM");
-	}
-	return e;
-};
+const editor = ace.edit("editor");
+editor.setTheme("ace/theme/monokai");
+// editor.session.setMode("ace/mode/javascript");
 
-const onKeyDown = (e: any) => {
-	// if tab was pressed
-	if (e.keyCode === 9) {
-		// do not tab out of the editor
-		e.preventDefault();
-
-		// instead, insert a tab into our editor.
-		const editor = lm("editor");
-		const doc = editor.ownerDocument.defaultView;
-		const sel = doc.getSelection();
-		const range = sel.getRangeAt(0);
-
-		const tabNode = document.createTextNode("\t");
-		range.insertNode(tabNode);
-
-		range.setStartAfter(tabNode);
-		range.setEndAfter(tabNode);
-		sel.removeAllRanges();
-		sel.addRange(range);
-	}
-};
+$("#output").val("");
 
 const textToArray = (innerText: string): string[] => {
 	return innerText.split("\n");
@@ -45,16 +23,9 @@ const arrayToText = (array: string[]): string => {
 	return array.reduce((acc, val) => acc + "\n" + val);
 };
 
-const pad = (str: string, len: number) => {
-	while (str.length < len) {
-		str = str + " ";
-	}
-	return str;
-};
-
-lm("button_run").onclick = (): void => {
+$("#btnCompile").click((): void => {
 	try {
-		const arr = textToArray(lm("editor").innerText);
+		const arr = textToArray(editor.getValue());
 		const comp = new cc.SicCompiler(arr);
 		let output = ["-----lst-----"];
 		output = output.concat(comp.makeLst());
@@ -63,11 +34,11 @@ lm("button_run").onclick = (): void => {
 			output = output.concat(comp.makeObj());
 		}
 		else {
-			output = output.concat("", "", "No obj generation due to errors in lst");
+			output = output.concat("", "", "No obj generation due to errors in lst.");
 		}
-		lm("output").innerText = arrayToText(output);
+		$("#output").val(arrayToText(output));
 	}
 	catch (e) {
 		alert((e as Error).message);
 	}
-};
+});

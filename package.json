@@ -4,7 +4,7 @@
   "description": "Javascript-based SIC/XE compiler/debugger",
   "main": "src/sicasm.ts",
   "scripts": {
-	"start": "npx ts-node src/sicasm.ts",
+    "start": "npx ts-node src/sicasm.ts",
     "test": "mocha --require ts-node/register tests/**/*.ts"
   },
   "repository": {
@@ -39,6 +39,10 @@
     "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
-    "@types/node": "^10.12.10"
+    "@types/ace": "0.0.40",
+    "@types/jquery": "^3.3.22",
+    "@types/node": "^10.12.10",
+    "ace-code-editor": "^1.2.3",
+    "jquery": "^3.3.1"
   }
 }

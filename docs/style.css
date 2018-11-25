@@ -1,49 +1,17 @@
-/* i'm pretty sure that css was secretly designed by hitler to enact his revenge on the future generations.
- * that means when you specify a percentage height, it doesn't take up that percent of the screen like it should.
- * instead, it takes up that percentage of the height of the contents.
- * this makes sure that they take up a percentage of the screen instead.
- */
-html, body{
-	height: 100%;
-	width: 100%;
-	margin: 0;
-}
-
-.textbox {
-	box-sizing: border-box;
-	border: 1px solid gray;
-	font: medium;
-	font-family: monospace;
-	overflow: auto;
-}
-
-#wrapper-top {
-	box-sizing: border-box;
-	border: 1px solid red;
-	height: 2em;
-	width: 100%;
-}
-
-#wrapper-bot {
-	box-sizing: border-box;
-	border: 1px solid red;
-	width: 100%;
-	position: absolute;
-	top: 2em;
-	bottom: 0;
+html, body {
+	height: 100%
 }
 
 #editor {
-	width: 50%;
+	width: 100%;
 	height: 100%;
-	float: left;
-	white-space: pre;
 }
 
 #output {
-	width: 50%;
+	width: 100%;
 	height: 100%;
-	float: right;
-	overflow: hidden;
+	font-family: monospace;
 	white-space: pre;
+	overflow-wrap: normal;
+	overflow-x: scroll;
 }
