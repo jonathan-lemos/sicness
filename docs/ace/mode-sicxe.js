@@ -55,20 +55,24 @@ ace.define("ace/mode/sicxe_highlight_rules", ["require", "exports", "module", "a
 					caseInsensitive: true
 				},
 				{
+					token: 'entity.name.function.assembly',
+					regex: '\\s+(?:#|=|@)\\b'
+				},
+				{
 					token: 'variable.parameter.register.assembly',
 					regex: '\\s+(?:A|B|L|PC|SW|B|S|T|F)\\b',
 					caseInsensitive: true
 				},
 				{
 					token: 'constant.character.hexadecimal.assembly',
-					regex: '\\s+X\'[A-F0-9]{1,6}\'',
+					regex: '\\bX\'[A-F0-9]{1,6}\'',
 					caseInsensitive: true
 				},
 				{
 					token: 'constant.character.decimal.assembly',
-					regex: '\\s+[0-9]+\\b'
+					regex: '\\b[0-9]+\\b'
 				},
-				{ token: 'string.assembly', regex: /C'([^\\']|\\.)*'/ },
+				{ token: 'string.assembly', regex: /\\b?C'([^\\']|\\.)*'/ },
 				{ token: 'comment.assembly', regex: '\\..*$' }]
 		};
 
