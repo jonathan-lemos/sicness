@@ -61,7 +61,7 @@ ace.define("ace/mode/sicxe_highlight_rules", ["require", "exports", "module", "a
 				},
 				{
 					token: 'constant.character.hexadecimal.assembly',
-					regex: '\\sX\'[A-F0-9]+\'',
+					regex: '\\sX\'[A-F0-9]{1,6}\'',
 					caseInsensitive: true
 				},
 				{
