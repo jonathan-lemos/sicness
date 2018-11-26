@@ -43,14 +43,14 @@ gulp.task("bundle", function() {
     var bundler = browserify({
         debug: true,
         standalone: libraryName
-    }).ignore(["ace", "jquery"]);
+    }).ignore(["ace", "ace-builds", "jquery"]);
 
     return bundler.add(mainTsFilePath)
         .bundle()
         .pipe(source(outputFileName))
         .pipe(buffer())
         .pipe(sourcemaps.init({ loadMaps: true }))
-        .pipe(uglify())
+        // .pipe(uglify())
         .pipe(sourcemaps.write('./'))
         .pipe(gulp.dest(outputFolder));
 });

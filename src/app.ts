@@ -6,13 +6,18 @@
 */
 
 import "ace";
+// import * as ace from "ace-builds";
 import "jquery";
 import * as cc from "./sicxe_cc";
 
+// ace.config.set("basePath", "/");
+// ace.config.set("modePath", "/");
+// ace.config.set("themePath", "/");
 const editor = ace.edit("editor");
 editor.setTheme("ace/theme/monokai");
-editor.session.setOption("modePath", ".");
-editor.session.setMode("mode-sicxe.js");
+// editor.session.setUseWorker(false);
+// ace.config.set("modePath", ".");
+editor.session.setMode("ace/mode/sicxe");
 
 $("#output").val("");
 
