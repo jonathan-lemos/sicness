@@ -46,27 +46,27 @@ ace.define("ace/mode/sicxe_highlight_rules", ["require", "exports", "module", "a
 			start:
 				[{
 					token: 'support.function.directive.assembly',
-					regex: '\\b(?:base|byte|csect|end|equ|ltorg|nobase|resb|resw|start|use|word)\\b',
+					regex: '\\s+(?:base|byte|csect|end|equ|ltorg|nobase|resb|resw|start|use|word)\\b',
 					caseInsensitive: true
 				},
 				{
 					token: 'keyword.control.assembly',
-					regex: '\\b(?:add|addf|addr|and|clear|comp|compf|compr|div|divf|divr|fix|float|hio|j|jeq|jgt|jlt|jsub|lda|ldb|ldch|ldf|ldl|lds|ldt|ldx|lps|mul|mulf|mulr|norm|or|rd|rmo|rsub|shiftl|shiftr|sio|ssk|sta|stb|stch|stf|sti|stl|sts|stsw|stt|stx|sub|subf|subr|svc|td|tio|tix|tixr|wd)\\b',
+					regex: '\\s+(?:add|addf|addr|and|clear|comp|compf|compr|div|divf|divr|fix|float|hio|j|jeq|jgt|jlt|jsub|lda|ldb|ldch|ldf|ldl|lds|ldt|ldx|lps|mul|mulf|mulr|norm|or|rd|rmo|rsub|shiftl|shiftr|sio|ssk|sta|stb|stch|stf|sti|stl|sts|stsw|stt|stx|sub|subf|subr|svc|td|tio|tix|tixr|wd)\\b',
 					caseInsensitive: true
 				},
 				{
 					token: 'variable.parameter.register.assembly',
-					regex: '\\b(?:A|B|L|PC|SW|B|S|T|F)\\b',
+					regex: '\\s+(?:A|B|L|PC|SW|B|S|T|F)\\b',
 					caseInsensitive: true
 				},
 				{
 					token: 'constant.character.hexadecimal.assembly',
-					regex: '\\sX\'[A-F0-9]{1,6}\'',
+					regex: '\\s+X\'[A-F0-9]{1,6}\'',
 					caseInsensitive: true
 				},
 				{
 					token: 'constant.character.decimal.assembly',
-					regex: '\\b[0-9]+\\b'
+					regex: '\\s+[0-9]+\\b'
 				},
 				{ token: 'string.assembly', regex: /C'([^\\']|\\.)*'/ },
 				{ token: 'comment.assembly', regex: '\\..*$' }]
