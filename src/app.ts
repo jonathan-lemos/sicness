@@ -11,7 +11,8 @@ import * as cc from "./sicxe_cc";
 
 const editor = ace.edit("editor");
 editor.setTheme("ace/theme/monokai");
-// editor.session.setMode("ace/mode/javascript");
+editor.session.setOption("modePath", ".");
+editor.session.setMode("mode-sicxe.js");
 
 $("#output").val("");
 
