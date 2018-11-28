@@ -112,8 +112,8 @@ export class SicSplit {
 			this.args = "";
 		}
 
-		if (this.tag.match(/^[A-Z]$/) ===  null) {
-			throw new Error("Labels can only contain A-Z");
+		if (this.tag.match(/^[A-Z]*$/) === null) {
+			throw new Error(`Labels can only contain A-Z (found "${this.tag}")`);
 		}
 	}
 }
@@ -1605,7 +1605,7 @@ export class SicCsectTab {
 			RESW: (source: string, split: SicSplit): void => {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESW can be jumped to.
-				this.current.lst.push(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(source,
 					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
 				this.current.useTab.inc(3 * parseNum(split.args));
@@ -1614,7 +1614,7 @@ export class SicCsectTab {
 			RESB: (source: string, split: SicSplit): void => {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESB can be jumped to.
-				this.current.lst.push(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(source,
 					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
 				this.current.useTab.inc(parseNum(split.args));
@@ -1627,7 +1627,7 @@ export class SicCsectTab {
 				}
 				// START arguments are always hexadecimal
 				this.current.setStartAddr(parseInt(split.args, 16));
-				this.current.lst.push(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(source,
 					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 				this.startData = { name: split.tag, loc: this.current.useTab.aloc };
 			},
@@ -1638,7 +1638,7 @@ export class SicCsectTab {
 					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
 				}
-				this.current.lst.push(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(source,
 					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 			},
 
@@ -1650,19 +1650,19 @@ export class SicCsectTab {
 				catch (e) {
 					this.current.base = new SicBase(new SicPending(split.args));
 				}
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 			},
 
 			NOBASE: (source: string, split: SicSplit): void => {
 				this.current.base = undefined;
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 			},
 
 			LTORG: (source: string, split: SicSplit): void => {
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 				const l = this.current.litTab.createOrg(this.current.useTab.aloc);
 				l.forEach(v => {
-					this.current.lst.push(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
+					this.addLst(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
 						{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: new SicLiteral(v.val) }));
 					this.current.useTab.inc(3);
 				});
@@ -1678,27 +1678,27 @@ export class SicCsectTab {
 				this.current.equTab[split.tag] = split.args;
 				// this.equTab["foo"] -> bar.
 				// this.equTab["bar"] -> ...
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 			},
 
 			USE: (source: string, split: SicSplit): void => {
 				this.current.useTab.use(split.args);
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 			},
 
 			CSECT: (source: string, split: SicSplit): void => {
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 				this.csect(split.tag);
 			},
 
 			EXTDEF: (source: string, split: SicSplit): void => {
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 				this.current.extDefTab[split.tag] = this.current.useTab.aloc;
 			},
 
 			EXTREF: (source: string, split: SicSplit): void => {
 				const s = split.args.split(",");
-				this.current.lst.push(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source));
 				this.current.extRefTab = this.current.extRefTab.concat(split.args.split(","));
 				s.forEach(r => this.current.tagTab[r] = 0);
 			},
@@ -1773,11 +1773,11 @@ export class SicCsectTab {
 			return buf;
 		};
 
-		const mkE = (name: string | undefined): string => {
-			return "E" + (name !== undefined ? name : "");
+		const mkE = (startData: {name: string, loc: number} | undefined): string => {
+			return "E" + (startData !== undefined ? asWord(startData.loc) : "");
 		};
 
-		const getLen = (a: SicLstEntry[]) => {
+		const getLen = (a: SicLstEntry[]): number => {
 			let start = 0;
 			let end = 0;
 
@@ -1798,10 +1798,28 @@ export class SicCsectTab {
 		};
 
 		s.push(mkH(getLen(this.csects[""].lst), this.startData));
-		s.push(mkD(this.csects[""].extDefTab));
-		s.push(mkR(this.csects[""].extRefTab));
+		if (Object.keys(this.csects[""].extDefTab).length !== 0) {
+			s.push(mkD(this.csects[""].extDefTab));
+		}
+		if (Object.keys(this.csects[""].extRefTab).length !== 0) {
+			s.push(mkR(this.csects[""].extRefTab));
+		}
 		s = s.concat(mkT(this.csects[""].lst));
-		s.push(mkE(this.startData !== undefined ? this.startData.name : undefined));
+		s.push(mkE(this.startData));
+
+		this.forEachAux(c => {
+			s.push(mkH(getLen(c.lst), undefined));
+			if (Object.keys(c.extDefTab).length !== 0) {
+				s.push(mkD(c.extDefTab));
+			}
+			if (Object.keys(c.extRefTab).length !== 0) {
+				s.push(mkR(c.extRefTab));
+			}
+			s = s.concat(mkT(c.lst));
+			s.push(mkE(undefined));
+		});
+
+		return s;
 	}
 
 	public get current(): SicCsect {
@@ -1938,7 +1956,7 @@ export class SicCompiler {
 				}
 
 				// add the instruction to the lst
-				this.csects.current.lst.push(new SicLstEntry(val,
+				this.csects.addLst(new SicLstEntry(val,
 					{ aloc: this.csects.current.useTab.aloc, rloc: this.csects.current.useTab.rloc, inst: instr }));
 				// increment usetab accordingly
 				this.csects.current.useTab.inc(instr.length());
@@ -1974,6 +1992,13 @@ export class SicCompiler {
 	 */
 	public makeLst(): string[] {
 		return this.csects.makeLst();
+	}
+
+	/**
+	 * Creates an OBJ out of the processed lines of code.
+	 */
+	public makeObj(): string[] {
+		return this.csects.makeObj();
 	}
 
 	/**
