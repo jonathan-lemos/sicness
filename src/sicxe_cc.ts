@@ -1688,6 +1688,7 @@ export class SicCsectTab {
 			},
 
 			CSECT: (source: string, split: SicSplit): void => {
+				this.current.extDefTab[split.tag] = this.current.useTab.aloc;
 				this.addLst(new SicLstEntry(source));
 				this.csect(split.tag);
 			},
@@ -1759,7 +1760,7 @@ export class SicCsectTab {
 		};
 
 		const mkD = (defs: { [key: string]: number }): string => {
-			return "D" + Object.keys(defs).reduce((a, v) => a + v + asWord(defs[v]));
+			return "D" + Object.keys(defs).reduce((a, v) => a + v + asWord(defs[v]), "");
 		};
 
 		const mkR = (refs: string[]): string => {
@@ -1777,8 +1778,11 @@ export class SicCsectTab {
 			return buf;
 		};
 
-		const mkE = (startData: {name: string, loc: number} | undefined): string => {
-			return "E" + (startData !== undefined ? asWord(startData.loc) : "");
+		const mkE = (loc?: number): string => {
+			if (loc === undefined) {
+				return "E";
+			}
+			return "E" + asWord(loc);
 		};
 
 		const getLen = (a: SicLstEntry[]): number => {
@@ -1801,7 +1805,10 @@ export class SicCsectTab {
 			return end - start;
 		};
 
-		s.push(mkH(getLen(this.csects[""].lst), this.startData));
+		const sloc = this.startData !== undefined ? this.startData.loc : 0;
+		const sname = this.startData !== undefined ? this.startData.name : "";
+
+		s.push(mkH(getLen(this.csects[""].lst), sloc, sname));
 		if (Object.keys(this.csects[""].extDefTab).length !== 0) {
 			s.push(mkD(this.csects[""].extDefTab));
 		}
@@ -1809,10 +1816,10 @@ export class SicCsectTab {
 			s.push(mkR(this.csects[""].extRefTab));
 		}
 		s = s.concat(mkT(this.csects[""].lst));
-		s.push(mkE(this.startData));
+		s.push(mkE(sloc));
 
-		this.forEachAux(c => {
-			s.push(mkH(getLen(c.lst), undefined));
+		this.forEachAux((c, n) => {
+			s.push(mkH(getLen(c.lst), 0, n));
 			if (Object.keys(c.extDefTab).length !== 0) {
 				s.push(mkD(c.extDefTab));
 			}
@@ -1820,7 +1827,7 @@ export class SicCsectTab {
 				s.push(mkR(c.extRefTab));
 			}
 			s = s.concat(mkT(c.lst));
-			s.push(mkE(undefined));
+			s.push(mkE());
 		});
 
 		return s;
@@ -1845,23 +1852,23 @@ export class SicCsectTab {
 		return this.csects[""];
 	}
 
-	public forEach(callback: (par: SicCsect) => void): void {
+	public forEach(callback: (par: SicCsect, name: string) => void): void {
 		const curBuf = this.currentSect;
 		Object.keys(this.csects).forEach(c => {
 			this.currentSect = c;
-			callback(this.csects[c]);
+			callback(this.csects[c], c);
 		});
 		this.currentSect = curBuf;
 	}
 
-	public forEachAux(callback: (par: SicCsect) => void): void {
+	public forEachAux(callback: (par: SicCsect, name: string) => void): void {
 		const curBuf = this.currentSect;
 		Object.keys(this.csects).forEach(c => {
 			if (c === "") {
 				return;
 			}
 			this.currentSect = c;
-			callback(this.csects[c]);
+			callback(this.csects[c], c);
 		});
 		this.currentSect = curBuf;
 	}
@@ -1969,7 +1976,7 @@ export class SicCompiler {
 			catch (e) {
 				this.errflag = true;
 				// report it
-				this.ctab.current.lst.push(new SicLstEntry(val, (e as Error).message));
+				this.ctab.addLst(new SicLstEntry(val, (e as Error).message));
 			}
 		});
 

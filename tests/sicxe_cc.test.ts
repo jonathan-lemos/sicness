@@ -816,11 +816,12 @@ describe("SicCompiler tests", () => {
 	];
 	const csectObj = [
 		"HTEST 000123000003",
-		"DNSEC000003",
+		"DNSEC000126",
 		"T00012303010004",
 		"E000123",
 		"HNSEC 000000000003",
 		"T00000003010005",
+		"E",
 	];
 
 	it("interacts with csect properly", () => {
