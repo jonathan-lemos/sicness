@@ -18,20 +18,17 @@ A work-in-progress online SIC/XE assembler/debugger written in Typescript (ES6)/
 	* \* (does not interact with EQU properly)
 
 ### Website:
-* Basic frontend complete (it looks awful).
+* Bootstrap frontend complete.
+* Syntax highlighing supported.
 
 ## Roadmap
 ### Assembler:
-* Add tests for SIC legacy operands and SicSpace instructions.
-* Implement .obj format.
+* Implement modification records.
 * Implement expression parser (BUFFERB - BUFFERA).
 * Fix LTORG/EQU/\*
-* Implement CSECT/ORG
 
 ### Website:
-* Clean up the css/html so it doesn't look awful.
-* Make a nicer looking frontend with React/Angular/Vue.
-* Seperate output for .lst and .obj.
+* Add static analysis.
 * Add a tabbed setup to switch between assembler and debugger.
 
 ### Debugger:

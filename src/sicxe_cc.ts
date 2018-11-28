@@ -646,7 +646,7 @@ export class SicOperandAddr {
 		const x = this.indexed;
 		const b = !this.pcrel && this.base !== undefined;
 		const p = this.pcrel;
-		const e = this.type !== SicOpType.f3;
+		const e = this.type === SicOpType.f4;
 
 		switch (this.addr) {
 			case SicOpAddrType.direct:
@@ -1634,6 +1634,7 @@ export class SicCsectTab {
 
 			// TODO fix bug where this doesn't have to be the final line of code.
 			END: (source: string, split: SicSplit): void => {
+				this.csect("");
 				if ((this.startData === undefined && split.args !== "") ||
 					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
@@ -1747,11 +1748,14 @@ export class SicCsectTab {
 	public makeObj(): string[] {
 		let s: string[] = [];
 
-		const mkH = (len: number, startData: {name: string, loc: number} | undefined): string => {
-			if (startData === undefined) {
-				startData = {name: "", loc: 0};
+		const mkH = (len: number, loc?: number, name?: string): string => {
+			if (loc === undefined) {
+				loc = 0;
 			}
-			return "H" + startData.name + " " + asWord(startData.loc) + asWord(len);
+			if (name === undefined) {
+				name = "";
+			}
+			return "H" + name + " " + asWord(loc) + asWord(len);
 		};
 
 		const mkD = (defs: { [key: string]: number }): string => {
@@ -1831,10 +1835,10 @@ export class SicCsectTab {
 	 * @param newSect The new CSECT name.
 	 */
 	public csect(newSect: string): void {
+		this.currentSect = newSect;
 		if (this.csects[this.currentSect] === undefined) {
 			this.csects[this.currentSect] = new SicCsect(0);
 		}
-		this.currentSect = newSect;
 	}
 
 	public get default(): SicCsect {
@@ -1878,7 +1882,7 @@ export class SicCompiler {
 	 * A hashtable containing csects (compiler contexts)
 	 * The default is "".
 	 */
-	private csects: SicCsectTab;
+	private ctab: SicCsectTab;
 
 	/** True if an error was found during compilation. */
 	private errflag: boolean;
@@ -1889,7 +1893,7 @@ export class SicCompiler {
 	 * @param lines The lines of code to compile.
 	 */
 	constructor(lines: string[]) {
-		this.csects = new SicCsectTab();
+		this.ctab = new SicCsectTab();
 		this.errflag = false;
 
 		// pass 1
@@ -1905,29 +1909,29 @@ export class SicCompiler {
 				let instr: ISicInstruction;
 
 				// replace * with current loc
-				split.args.replace(/(#|@|=)\*$/, "$1" + this.csects.current.useTab.aloc.toString(10));
+				split.args.replace(/(#|@|=)\*$/, "$1" + this.ctab.current.useTab.aloc.toString(10));
 				// replace strings in equTab
-				for (const key of Object.keys(this.csects.current.equTab)) {
+				for (const key of Object.keys(this.ctab.current.equTab)) {
 					if (split.args.match(key) === null) {
 						continue;
 					}
 					// keep replacing EQU like the prototype chain
-					for (let s: string | undefined = this.csects.current.equTab[key];
+					for (let s: string | undefined = this.ctab.current.equTab[key];
 						s !== undefined;
-						s = this.csects.current.equTab[s]) {
-						split.args = split.args.replace(key, this.csects.current.equTab[key]);
+						s = this.ctab.current.equTab[s]) {
+						split.args = split.args.replace(key, this.ctab.current.equTab[key]);
 					}
 					break;
 				}
 
 				// if this line has a label, add it to the label tab
 				if (split.tag !== undefined) {
-					this.csects.current.tagTab[split.tag] = this.csects.current.useTab.aloc;
+					this.ctab.current.tagTab[split.tag] = this.ctab.current.useTab.aloc;
 				}
 
 				// if this line is a directive, process the directive and continue.
-				if (this.csects.isDirective(split.op)) {
-					this.csects.directives[split.op](val, split);
+				if (this.ctab.isDirective(split.op)) {
+					this.ctab.directives[split.op](val, split);
 					return;
 				}
 
@@ -1940,13 +1944,13 @@ export class SicCompiler {
 					instr = new SicFormat2(split);
 				}
 				else if (SicFormat3.isFormat3(split.op)) {
-					instr = new SicFormat3(split, this.csects.current.litTab, this.csects.current.base);
+					instr = new SicFormat3(split, this.ctab.current.litTab, this.ctab.current.base);
 				}
 				else if (SicFormat4.isFormat4(split.op)) {
-					instr = new SicFormat4(split, this.csects.current.litTab);
+					instr = new SicFormat4(split, this.ctab.current.litTab);
 				}
 				else if (SicFormatLegacy.isFormatLegacy(split.op)) {
-					instr = new SicFormatLegacy(split, this.csects.current.litTab);
+					instr = new SicFormatLegacy(split, this.ctab.current.litTab);
 				}
 				else if (SicSpace.isSpace(split.op)) {
 					instr = new SicSpace(split);
@@ -1956,28 +1960,28 @@ export class SicCompiler {
 				}
 
 				// add the instruction to the lst
-				this.csects.addLst(new SicLstEntry(val,
-					{ aloc: this.csects.current.useTab.aloc, rloc: this.csects.current.useTab.rloc, inst: instr }));
+				this.ctab.addLst(new SicLstEntry(val,
+					{ aloc: this.ctab.current.useTab.aloc, rloc: this.ctab.current.useTab.rloc, inst: instr }));
 				// increment usetab accordingly
-				this.csects.current.useTab.inc(instr.length());
+				this.ctab.current.useTab.inc(instr.length());
 			}
 			// if there was an error
 			catch (e) {
 				this.errflag = true;
 				// report it
-				this.csects.current.lst.push(new SicLstEntry(val, (e as Error).message));
+				this.ctab.current.lst.push(new SicLstEntry(val, (e as Error).message));
 			}
 		});
 
 		// add final ltorg if literals are not in one
-		this.csects.forEach(p => {
+		this.ctab.forEach(p => {
 			if (p.litTab.hasPending()) {
-				this.csects.directives["LTORG"]("AUTO-LTORG", new SicSplit("\tAUTO-LTORG"));
+				this.ctab.directives["LTORG"]("AUTO-LTORG", new SicSplit("\tAUTO-LTORG"));
 			}
 		});
 
 		// pass 2
-		this.csects.forEach(p => {
+		this.ctab.forEach(p => {
 			p.lst.forEach(l => {
 				// make all pending instructions ready
 				if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
@@ -1991,14 +1995,14 @@ export class SicCompiler {
 	 * Creates an LST out of the processed lines of code.
 	 */
 	public makeLst(): string[] {
-		return this.csects.makeLst();
+		return this.ctab.makeLst();
 	}
 
 	/**
 	 * Creates an OBJ out of the processed lines of code.
 	 */
 	public makeObj(): string[] {
-		return this.csects.makeObj();
+		return this.ctab.makeObj();
 	}
 
 	/**
