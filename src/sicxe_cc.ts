@@ -111,6 +111,10 @@ export class SicSplit {
 		else {
 			this.args = "";
 		}
+
+		if (this.tag.match(/^[A-Z]$/) ===  null) {
+			throw new Error("Labels can only contain A-Z");
+		}
 	}
 }
 
@@ -432,7 +436,7 @@ export class SicOperandAddr {
 		// Matches up to 3 characters in an argument (@'EOF')
 		const reChar = new RegExp("^(=|#|@)?C'(.{1,3})'(,X)?$");
 		// Matches a label argument (@VAL)
-		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
+		const reTag = new RegExp("^(#|@)?([A-Z]+)(,X)?$");
 
 		// For all of the above regexes:
 		// match[0] === The raw input string
@@ -1511,11 +1515,18 @@ export class SicCsect {
 	public tagTab: { [key: string]: number };
 	/** The EQU tab in use. This is a hashtable mapping strings to strings. */
 	public equTab: { [key: string]: string };
+	/** A list of EXTREFS made. */
+	public extDefTab: { [key: string]: number };
+	/** A list of EXTDEFS made. */
+	public extRefTab: string[];
 	/** The USE tab / locctr tracker. */
 	public useTab: SicUseTab;
+	/** SicBase if base-relative can be used, or undefined if not. */
+	public base: SicBase | undefined;
 
 	/**
 	 * Constructs a SicCsect
+	 * @constructor
 	 */
 	constructor(startAddr: number) {
 		this.lst = [];
@@ -1523,8 +1534,14 @@ export class SicCsect {
 		this.tagTab = {};
 		this.equTab = {};
 		this.useTab = new SicUseTab(startAddr);
+		this.extDefTab = {};
+		this.extRefTab = [];
 	}
 
+	/**
+	 * Sets the starting address of the internal USE tab.
+	 * This will wipe out the current USE tab.
+	 */
 	public setStartAddr(startAddr: number) {
 		this.useTab = new SicUseTab(startAddr);
 	}
@@ -1534,10 +1551,16 @@ export class SicCsect {
  * Class that keeps track of csect.
  */
 export class SicCsectTab {
+	/** The compiler directives this SicCsectTab supports. */
+	public directives: { [key: string]: (source: string, split: SicSplit) => void };
+	/** The START data. */
+	private startData: { name: string, loc: number } | undefined;
 	/** Hashtable containing this program's CSECTs */
 	private csects: { [key: string]: SicCsect };
 	/** The current CSECT. By default this is "" */
 	private currentSect: string;
+	/** The lst of this program */
+	private lst: SicLstEntry[];
 
 	/**
 	 * Constructs a SicCsectTab
@@ -1546,93 +1569,8 @@ export class SicCsectTab {
 	constructor() {
 		this.currentSect = "";
 		this.csects = {};
-	}
-
-	/**
-	 * Sets the starting address of the internal USE tab.
-	 * @param startAddr The starting address of the internal USE tab.
-	 */
-	public setAddr(startAddr: number): void {
-		this.csects[this.currentSect].setStartAddr(startAddr);
-	}
-
-	/**
-	 * Switches the current CSECT
-	 * @param newSect The new CSECT name.
-	 */
-	public csect(newSect: string): void {
-		if (this.csects[this.currentSect] === undefined) {
-			this.csects[this.currentSect] = new SicCsect(0);
-		}
-		this.currentSect = newSect;
-	}
-
-	/**
-	 * Gets the current lst.
-	 */
-	public get lst() {
-		return this.csects[this.currentSect].lst;
-	}
-
-	/**
-	 * Gets the current literal tab.
-	 */
-	public get litTab() {
-		return this.csects[this.currentSect].litTab;
-	}
-
-	/**
-	 * Gets the current USE tab.
-	 */
-	public get useTab() {
-		return this.csects[this.currentSect].useTab;
-	}
-
-	/**
-	 * Gets the current EQU tab.
-	 */
-	public get equTab() {
-		return this.csects[this.currentSect].equTab;
-	}
-
-	/**
-	 * Gets the current label tab
-	 */
-	public get tagTab() {
-		return this.csects[this.currentSect].tagTab;
-	}
-}
-
-/**
- * Class that compiles raw source code into LST and OBJ formats.
- */
-export class SicCompiler {
-	/**
-	 * If a START directive is given, its data will show up here.
-	 * @property name The label given to start.
-	 * @property loc The locctr given to start.
-	 */
-	private startData: { name: string, loc: number } | undefined;
-
-	/**
-	 * A hashtable containing csects (compiler contexts)
-	 * The default is "".
-	 */
-	private csects: SicCsectTab;
-
-	/** True if an error was found during compilation. */
-	private errflag: boolean;
-
-	/**
-	 * Constructs a SicCompiler and compiles the code.
-	 * @constructor
-	 * @param lines The lines of code to compile.
-	 */
-	constructor(lines: string[]) {
-		let baserel: SicBase | undefined;
-
-		this.csects = new SicCsectTab();
-		this.errflag = false;
+		this.csects[this.currentSect] = new SicCsect(0);
+		this.lst = [];
 
 		/**
 		 * Parses a numeric argument as decimal, hexadecimal, or character.
@@ -1663,35 +1601,35 @@ export class SicCompiler {
 		// Contains the compiler directive functions.
 		// This is a hashtable mapping strings to functions.
 		// For example, to use the RESW directive, call it like `directiveOps["RESW"](source, split);`
-		const directiveOps: { [key: string]: (source: string, split: SicSplit) => void } = {
+		this.directives = {
 			RESW: (source: string, split: SicSplit): void => {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESW can be jumped to.
-				this.csects.lst.push(new SicLstEntry(source,
-					{ aloc: this.csects.useTab.aloc, rloc: this.csects.useTab.rloc, inst: undefined }));
+				this.current.lst.push(new SicLstEntry(source,
+					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
-				this.csects.useTab.inc(3 * parseNum(split.args));
+				this.current.useTab.inc(3 * parseNum(split.args));
 			},
 
 			RESB: (source: string, split: SicSplit): void => {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESB can be jumped to.
-				this.csects.lst.push(new SicLstEntry(source,
-					{ aloc: this.csects.useTab.aloc, rloc: this.csects.useTab.rloc, inst: undefined }));
+				this.current.lst.push(new SicLstEntry(source,
+					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
-				this.csects.useTab.inc(parseNum(split.args));
+				this.current.useTab.inc(parseNum(split.args));
 			},
 
 			// TODO fix bug where START can be used multiple times if starting locctr === 0
 			START: (source: string, split: SicSplit): void => {
-				if (this.csects.useTab.aloc !== 0) {
+				if (this.currentSect !== "" || this.current.lst.length !== 0) {
 					throw new Error("START can only be used as the first line of a program.");
 				}
 				// START arguments are always hexadecimal
-				this.csects.setAddr(parseInt(split.args, 16));
-				this.csects.lst.push(new SicLstEntry(source,
-					{ aloc: this.csects.useTab.aloc, rloc: this.csects.useTab.rloc, inst: undefined }));
-				this.startData = { name: split.tag, loc: this.csects.useTab.aloc };
+				this.current.setStartAddr(parseInt(split.args, 16));
+				this.current.lst.push(new SicLstEntry(source,
+					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
+				this.startData = { name: split.tag, loc: this.current.useTab.aloc };
 			},
 
 			// TODO fix bug where this doesn't have to be the final line of code.
@@ -1700,33 +1638,33 @@ export class SicCompiler {
 					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
 				}
-				this.csects.lst.push(new SicLstEntry(source,
-					{ aloc: this.csects.useTab.aloc, rloc: this.csects.useTab.rloc, inst: undefined }));
+				this.current.lst.push(new SicLstEntry(source,
+					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
 			},
 
 			BASE: (source: string, split: SicSplit): void => {
 				try {
-					baserel = new SicBase(parseNum(split.args));
+					this.current.base = new SicBase(parseNum(split.args));
 				}
 				// the operand is not numeric, meaning it is a label
 				catch (e) {
-					baserel = new SicBase(new SicPending(split.args));
+					this.current.base = new SicBase(new SicPending(split.args));
 				}
-				this.csects.lst.push(new SicLstEntry(source));
+				this.current.lst.push(new SicLstEntry(source));
 			},
 
 			NOBASE: (source: string, split: SicSplit): void => {
-				baserel = undefined;
-				this.csects.lst.push(new SicLstEntry(source));
+				this.current.base = undefined;
+				this.current.lst.push(new SicLstEntry(source));
 			},
 
 			LTORG: (source: string, split: SicSplit): void => {
-				this.csects.lst.push(new SicLstEntry(source));
-				const l = this.csects.litTab.createOrg(this.csects.useTab.aloc);
+				this.current.lst.push(new SicLstEntry(source));
+				const l = this.current.litTab.createOrg(this.current.useTab.aloc);
 				l.forEach(v => {
-					this.csects.lst.push(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
-						{ aloc: this.csects.useTab.aloc, rloc: this.csects.useTab.rloc, inst: new SicLiteral(v.val) }));
-					this.csects.useTab.inc(3);
+					this.current.lst.push(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
+						{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: new SicLiteral(v.val) }));
+					this.current.useTab.inc(3);
 				});
 			},
 
@@ -1734,121 +1672,48 @@ export class SicCompiler {
 				if (split.tag === "") {
 					throw new Error("EQU needs a non-empty label.");
 				}
-				if (this.csects.equTab[split.args] !== undefined) {
+				if (this.current.equTab[split.args] !== undefined) {
 					throw new Error("EQU " + split.args + " was already defined.");
 				}
-				this.csects.equTab[split.tag] = split.args;
+				this.current.equTab[split.tag] = split.args;
 				// this.equTab["foo"] -> bar.
 				// this.equTab["bar"] -> ...
-				this.csects.lst.push(new SicLstEntry(source));
+				this.current.lst.push(new SicLstEntry(source));
 			},
 
 			USE: (source: string, split: SicSplit): void => {
-				this.csects.useTab.use(split.args);
-				this.csects.lst.push(new SicLstEntry(source));
+				this.current.useTab.use(split.args);
+				this.current.lst.push(new SicLstEntry(source));
 			},
 
 			CSECT: (source: string, split: SicSplit): void => {
-				this.csects.lst.push(new SicLstEntry(source));
-				this.csects.csect(split.tag);
+				this.current.lst.push(new SicLstEntry(source));
+				this.csect(split.tag);
+			},
+
+			EXTDEF: (source: string, split: SicSplit): void => {
+				this.current.lst.push(new SicLstEntry(source));
+				this.current.extDefTab[split.tag] = this.current.useTab.aloc;
+			},
+
+			EXTREF: (source: string, split: SicSplit): void => {
+				const s = split.args.split(",");
+				this.current.lst.push(new SicLstEntry(source));
+				this.current.extRefTab = this.current.extRefTab.concat(split.args.split(","));
+				s.forEach(r => this.current.tagTab[r] = 0);
 			},
 		};
-
-		// Returns true if a mnemonic corresponds to a compiler directive.
-		const isDirective = (val: string) => directiveOps[val] !== undefined;
-
-		// pass 1
-		lines.forEach(val => {
-			try {
-				// if the line without any comments/whitespace is a blank string
-				if (val.replace(/\..*$/, "").trim() === "") {
-					// continue
-					return;
-				}
-
-				const split = new SicSplit(val);
-				let instr: ISicInstruction;
-
-				// replace * with current loc
-				split.args.replace(/(#|@|=)\*$/, "$1" + this.csects.useTab.aloc.toString(10));
-				// replace strings in equTab
-				for (const key of Object.keys(this.csects.equTab)) {
-					if (split.args.match(key) === null) {
-						continue;
-					}
-					// keep replacing EQU like the prototype chain
-					for (let s: string | undefined = this.csects.equTab[key]; s !== undefined; s = this.csects.equTab[s]) {
-						split.args = split.args.replace(key, this.csects.equTab[key]);
-					}
-					break;
-				}
-
-				// if this line has a label, add it to the label tab
-				if (split.tag !== undefined) {
-					this.csects.tagTab[split.tag] = this.csects.useTab.aloc;
-				}
-
-				// if this line is a directive, process the directive and continue.
-				if (isDirective(split.op)) {
-					directiveOps[split.op](val, split);
-					return;
-				}
-
-				// create the line of code
-
-				if (SicFormat1.isFormat1(split.op)) {
-					instr = new SicFormat1(split);
-				}
-				else if (SicFormat2.isFormat2(split.op)) {
-					instr = new SicFormat2(split);
-				}
-				else if (SicFormat3.isFormat3(split.op)) {
-					instr = new SicFormat3(split, this.csects.litTab, baserel);
-				}
-				else if (SicFormat4.isFormat4(split.op)) {
-					instr = new SicFormat4(split, this.csects.litTab);
-				}
-				else if (SicFormatLegacy.isFormatLegacy(split.op)) {
-					instr = new SicFormatLegacy(split, this.csects.litTab);
-				}
-				else if (SicSpace.isSpace(split.op)) {
-					instr = new SicSpace(split);
-				}
-				else {
-					throw new Error(split.op + " is not a valid mnemonic.");
-				}
-
-				// add the instruction to the lst
-				this.csects.lst.push(new SicLstEntry(val,
-					{ aloc: this.csects.useTab.aloc, rloc: this.csects.useTab.rloc, inst: instr }));
-				// increment usetab accordingly
-				this.csects.useTab.inc(instr.length());
-			}
-			// if there was an error
-			catch (e) {
-				this.errflag = true;
-				// report it
-				this.csects.lst.push(new SicLstEntry(val, (e as Error).message));
-			}
-		});
-
-		// add final ltorg if literals are not in one
-		if (this.litTab.hasPending()) {
-			directiveOps["LTORG"]("AUTO-LTORG", new SicSplit("\tAUTO-LTORG"));
-		}
-
-		// pass 2
-		this.lst.forEach(l => {
-			// make all pending instructions ready
-			if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
-				l.bcData.inst.makeReady(l.bcData.aloc, this.tagTab, this.litTab);
-			}
-		});
 	}
 
-	/**
-	 * Creates an LST out of the processed lines of code.
-	 */
+	public isDirective(mnemonic: string): boolean {
+		return this.directives[mnemonic] !== undefined;
+	}
+
+	public addLst(l: SicLstEntry): void {
+		this.lst.push(l);
+		this.current.lst.push(l);
+	}
+
 	public makeLst(): string[] {
 		const s = ["n"];
 		s[0] = "n    \taloc \trloc \tbytecode\tsource";
@@ -1880,37 +1745,235 @@ export class SicCompiler {
 	 * Creates an OBJ out of the lines of code.
 	 */
 	public makeObj(): string[] {
-		const s: string[] = [];
+		let s: string[] = [];
 
-		// H record
-		let tmp = "H";
-		const loc = this.startData !== undefined ? this.startData.loc : 0;
-		if (this.startData !== undefined) {
-			tmp += this.startData.name;
+		const mkH = (len: number, startData: {name: string, loc: number} | undefined): string => {
+			if (startData === undefined) {
+				startData = {name: "", loc: 0};
+			}
+			return "H" + startData.name + " " + asWord(startData.loc) + asWord(len);
+		};
+
+		const mkD = (defs: { [key: string]: number }): string => {
+			return "D" + Object.keys(defs).reduce((a, v) => a + v + asWord(defs[v]));
+		};
+
+		const mkR = (refs: string[]): string => {
+			return "R" + Object.keys(refs).reduce((a, v) => a + v + " ").trim();
+		};
+
+		const mkT = (arr: SicLstEntry[]): string[] => {
+			const buf: string[] = [];
+			arr.forEach(l => {
+				if (l.bcData === undefined || l.bcData.inst === undefined) {
+					return;
+				}
+				buf.push("T" + asWord(l.bcData.aloc) + asByte(l.bcData.inst.length()) + bytesToString(l.bcData.inst.toBytes()));
+			});
+			return buf;
+		};
+
+		const mkE = (name: string | undefined): string => {
+			return "E" + (name !== undefined ? name : "");
+		};
+
+		const getLen = (a: SicLstEntry[]) => {
+			let start = 0;
+			let end = 0;
+
+			for (const b of a) {
+				if (b.bcData !== undefined) {
+					start = b.bcData.aloc;
+					break;
+				}
+			}
+			for (let i = a.length - 1; i >= 0; --i) {
+				const bc = a[i].bcData;
+				if (bc !== undefined) {
+					end = bc.aloc + (bc.inst !== undefined ? bc.inst.length() : 0);
+					break;
+				}
+			}
+			return end - start;
+		};
+
+		s.push(mkH(getLen(this.csects[""].lst), this.startData));
+		s.push(mkD(this.csects[""].extDefTab));
+		s.push(mkR(this.csects[""].extRefTab));
+		s = s.concat(mkT(this.csects[""].lst));
+		s.push(mkE(this.startData !== undefined ? this.startData.name : undefined));
+	}
+
+	public get current(): SicCsect {
+		return this.csects[this.currentSect];
+	}
+
+	/**
+	 * Switches the current CSECT
+	 * @param newSect The new CSECT name.
+	 */
+	public csect(newSect: string): void {
+		if (this.csects[this.currentSect] === undefined) {
+			this.csects[this.currentSect] = new SicCsect(0);
 		}
-		tmp += " ";
-		tmp += asWord(loc);
-		tmp += asWord(this.useTab.aloc - loc);
-		s.push(tmp);
+		this.currentSect = newSect;
+	}
 
-		// T records - one per instruction
-		this.lst.forEach(ls => {
-			let t = "T";
+	public get default(): SicCsect {
+		return this.csects[""];
+	}
 
-			if (ls.bcData === undefined || ls.bcData.inst === undefined) {
+	public forEach(callback: (par: SicCsect) => void): void {
+		const curBuf = this.currentSect;
+		Object.keys(this.csects).forEach(c => {
+			this.currentSect = c;
+			callback(this.csects[c]);
+		});
+		this.currentSect = curBuf;
+	}
+
+	public forEachAux(callback: (par: SicCsect) => void): void {
+		const curBuf = this.currentSect;
+		Object.keys(this.csects).forEach(c => {
+			if (c === "") {
 				return;
 			}
+			this.currentSect = c;
+			callback(this.csects[c]);
+		});
+		this.currentSect = curBuf;
+	}
+}
 
-			t += asWord(ls.bcData.aloc);
-			t += asByte(ls.bcData.inst.toBytes().length);
-			t += bytesToString(ls.bcData.inst.toBytes());
-			s.push(t);
+/**
+ * Class that compiles raw source code into LST and OBJ formats.
+ */
+export class SicCompiler {
+	/**
+	 * If a START directive is given, its data will show up here.
+	 * @property name The label given to start.
+	 * @property loc The locctr given to start.
+	 */
+	private startData: { name: string, loc: number } | undefined;
+
+	/**
+	 * A hashtable containing csects (compiler contexts)
+	 * The default is "".
+	 */
+	private csects: SicCsectTab;
+
+	/** True if an error was found during compilation. */
+	private errflag: boolean;
+
+	/**
+	 * Constructs a SicCompiler and compiles the code.
+	 * @constructor
+	 * @param lines The lines of code to compile.
+	 */
+	constructor(lines: string[]) {
+		this.csects = new SicCsectTab();
+		this.errflag = false;
+
+		// pass 1
+		lines.forEach(val => {
+			try {
+				// if the line without any comments/whitespace is a blank string
+				if (val.replace(/\..*$/, "").trim() === "") {
+					// continue
+					return;
+				}
+
+				const split = new SicSplit(val);
+				let instr: ISicInstruction;
+
+				// replace * with current loc
+				split.args.replace(/(#|@|=)\*$/, "$1" + this.csects.current.useTab.aloc.toString(10));
+				// replace strings in equTab
+				for (const key of Object.keys(this.csects.current.equTab)) {
+					if (split.args.match(key) === null) {
+						continue;
+					}
+					// keep replacing EQU like the prototype chain
+					for (let s: string | undefined = this.csects.current.equTab[key];
+						s !== undefined;
+						s = this.csects.current.equTab[s]) {
+						split.args = split.args.replace(key, this.csects.current.equTab[key]);
+					}
+					break;
+				}
+
+				// if this line has a label, add it to the label tab
+				if (split.tag !== undefined) {
+					this.csects.current.tagTab[split.tag] = this.csects.current.useTab.aloc;
+				}
+
+				// if this line is a directive, process the directive and continue.
+				if (this.csects.isDirective(split.op)) {
+					this.csects.directives[split.op](val, split);
+					return;
+				}
+
+				// create the line of code
+
+				if (SicFormat1.isFormat1(split.op)) {
+					instr = new SicFormat1(split);
+				}
+				else if (SicFormat2.isFormat2(split.op)) {
+					instr = new SicFormat2(split);
+				}
+				else if (SicFormat3.isFormat3(split.op)) {
+					instr = new SicFormat3(split, this.csects.current.litTab, this.csects.current.base);
+				}
+				else if (SicFormat4.isFormat4(split.op)) {
+					instr = new SicFormat4(split, this.csects.current.litTab);
+				}
+				else if (SicFormatLegacy.isFormatLegacy(split.op)) {
+					instr = new SicFormatLegacy(split, this.csects.current.litTab);
+				}
+				else if (SicSpace.isSpace(split.op)) {
+					instr = new SicSpace(split);
+				}
+				else {
+					throw new Error(split.op + " is not a valid mnemonic.");
+				}
+
+				// add the instruction to the lst
+				this.csects.current.lst.push(new SicLstEntry(val,
+					{ aloc: this.csects.current.useTab.aloc, rloc: this.csects.current.useTab.rloc, inst: instr }));
+				// increment usetab accordingly
+				this.csects.current.useTab.inc(instr.length());
+			}
+			// if there was an error
+			catch (e) {
+				this.errflag = true;
+				// report it
+				this.csects.current.lst.push(new SicLstEntry(val, (e as Error).message));
+			}
 		});
 
-		// E record
-		s.push("E" + (this.startData !== undefined ? asWord(loc) : ""));
+		// add final ltorg if literals are not in one
+		this.csects.forEach(p => {
+			if (p.litTab.hasPending()) {
+				this.csects.directives["LTORG"]("AUTO-LTORG", new SicSplit("\tAUTO-LTORG"));
+			}
+		});
 
-		return s;
+		// pass 2
+		this.csects.forEach(p => {
+			p.lst.forEach(l => {
+				// make all pending instructions ready
+				if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
+					l.bcData.inst.makeReady(l.bcData.aloc, p.tagTab, p.litTab);
+				}
+			});
+		});
+	}
+
+	/**
+	 * Creates an LST out of the processed lines of code.
+	 */
+	public makeLst(): string[] {
+		return this.csects.makeLst();
 	}
 
 	/**
@@ -1922,10 +1985,11 @@ export class SicCompiler {
 
 	/**
 	 * Converts the lines of code to raw bytes.
+	 *
+	 * public toBytes(): number[][] {
+	 * 	return this.lst.filter(l => l.hasInstruction()).map(l => l.byteCode());
+	 * }
 	 */
-	public toBytes(): number[][] {
-		return this.lst.filter(l => l.hasInstruction()).map(l => l.byteCode());
-	}
 }
 
 /**
