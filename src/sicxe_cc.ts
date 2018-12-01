@@ -106,7 +106,7 @@ export class SicSplit {
 		// TODO: parse these individually.
 		if (lineArr.length >= 3) {
 			// Concatenate all of them into one string.
-			this.args = lineArr.slice(2).reduce((acc, val) => acc + val);
+			this.args = lineArr.slice(2).reduce((acc, val) => acc + val, "");
 		}
 		else {
 			this.args = "";
@@ -428,7 +428,7 @@ export class SicOperandAddr {
 	 * @param litList The current LITTAB in use. If this argument is a literal it will be added to the pending list.
 	 * @param baserel An optional SicBase denoting that this operand can use base-relative addressing.
 	 */
-	constructor(arg: string, type: SicOpType, litList: SicLitTab, baserel?: SicBase) {
+	constructor(arg: string, type: SicOpType, csect: SicCsect) {
 		// Matches a decimal argument (@1234).
 		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
 		// Matches a hexadecimal argument (@X'1ABC')
@@ -462,7 +462,7 @@ export class SicOperandAddr {
 
 		this.type = type;
 		// Only format 3 can use base-relative addressing.
-		this.base = this.type === SicOpType.f3 ? baserel : undefined;
+		this.base = this.type === SicOpType.f3 ? csect.base : undefined;
 		// Only format 3 can use pc-relative addressing.
 		this.pcrel = this.type === SicOpType.f3;
 
@@ -473,7 +473,7 @@ export class SicOperandAddr {
 			// If the argument is a literal.
 			if (isLiteral(match[1])) {
 				// Add this literal to the pending list if it is not already there.
-				litList.add(x);
+				csect.litTab.add(x);
 				// Set this value to a new SicPending corresponding to the literal.
 				this.val = new SicPending(x);
 			}
@@ -490,7 +490,7 @@ export class SicOperandAddr {
 			// If the argument is a literal.
 			if (isLiteral(match[1])) {
 				// Add this literal to the pending list if it is not already there.
-				litList.add(x);
+				csect.litTab.add(x);
 				// Set this value to a new SicPending corresponding to the literal.
 				this.val = new SicPending(x);
 			}
@@ -517,7 +517,7 @@ export class SicOperandAddr {
 			// If the argument is a literal.
 			if (isLiteral(match[1])) {
 				// Add this literal to the pending list if it is not already there.
-				litList.add(x);
+				csect.litTab.add(x);
 				// Set this value to a new SicPending corresponding to the literal.
 				this.val = new SicPending(x);
 			}
@@ -529,8 +529,19 @@ export class SicOperandAddr {
 			}
 		}
 		else if ((match = arg.match(reTag)) != null) {
-			// Set this value to a new SicPending corresponding to the label.
-			this.val = new SicPending(match[2]);
+			if (csect.extRefTab.has(match[2])) {
+				if (this.type !== SicOpType.f4) {
+					throw new Error("EXTREF symbols can only be used with format 4");
+				}
+				csect.modRecs.push({loc: csect.useTab.aloc, len: 5, symbol: match[2]});
+				this.val = 0;
+				this.pcrel = false;
+				this.base = undefined;
+			}
+			else {
+				// Set this value to a new SicPending corresponding to the label.
+				this.val = new SicPending(match[2]);
+			}
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
@@ -908,13 +919,13 @@ export class SicFormat3 implements ISicInstruction {
 	 * Constructs a SicFormat3 out of a given line of code.
 	 * @constructor
 	 */
-	constructor(line: SicSplit, litSet: SicLitTab, baserel?: SicBase) {
+	constructor(line: SicSplit, csect: SicCsect) {
 		if (!SicFormat3.isFormat3(line.op)) {
 			throw new Error(line.op + " is not format 3");
 		}
 
 		this.bc = bytecodeTable[line.op];
-		this.op = new SicOperandAddr(line.args, SicOpType.f3, litSet, baserel);
+		this.op = new SicOperandAddr(line.args, SicOpType.f3, csect);
 	}
 
 	/**
@@ -984,13 +995,13 @@ export class SicFormatLegacy implements ISicInstruction {
 	/**
 	 * Constructs a SicFormatLegacy out of a given line of code.
 	 */
-	constructor(line: SicSplit, litList: SicLitTab) {
+	constructor(line: SicSplit, csect: SicCsect) {
 		if (!SicFormatLegacy.isFormatLegacy(line.op)) {
 			throw new Error(line.op + " is not SIC legacy format");
 		}
 
 		this.bc = bytecodeTable[line.op.slice(1)];
-		this.op = new SicOperandAddr(line.args, SicOpType.legacy, litList);
+		this.op = new SicOperandAddr(line.args, SicOpType.legacy, csect);
 	}
 
 	/**
@@ -1062,13 +1073,13 @@ export class SicFormat4 implements ISicInstruction {
 	 * @param line The line of code to convert.
 	 * @param litList The current literal tab in use.
 	 */
-	constructor(line: SicSplit, litList: SicLitTab) {
+	constructor(line: SicSplit, csect: SicCsect) {
 		if (!SicFormat4.isFormat4(line.op)) {
 			throw new Error(line.op + " is not format 4");
 		}
 
 		this.bc = bytecodeTable[line.op.slice(1)];
-		this.op = new SicOperandAddr(line.args, SicOpType.f4, litList);
+		this.op = new SicOperandAddr(line.args, SicOpType.f4, csect);
 	}
 
 	/**
@@ -1515,14 +1526,16 @@ export class SicCsect {
 	public tagTab: { [key: string]: number };
 	/** The EQU tab in use. This is a hashtable mapping strings to strings. */
 	public equTab: { [key: string]: string };
-	/** A list of EXTREFS made. */
-	public extDefTab: { [key: string]: number };
 	/** A list of EXTDEFS made. */
-	public extRefTab: string[];
+	public extDefTab: Set<string>;
+	/** A list of EXTREFS made. */
+	public extRefTab: Set<string>;
 	/** The USE tab / locctr tracker. */
 	public useTab: SicUseTab;
 	/** SicBase if base-relative can be used, or undefined if not. */
 	public base: SicBase | undefined;
+	/** A list of modification records to place in the code. */
+	public modRecs: Array<{ loc: number, len: number, symbol: string }>;
 
 	/**
 	 * Constructs a SicCsect
@@ -1534,8 +1547,9 @@ export class SicCsect {
 		this.tagTab = {};
 		this.equTab = {};
 		this.useTab = new SicUseTab(startAddr);
-		this.extDefTab = {};
-		this.extRefTab = [];
+		this.extDefTab = new Set<string>();
+		this.extRefTab = new Set<string>();
+		this.modRecs = [];
 	}
 
 	/**
@@ -1688,21 +1702,33 @@ export class SicCsectTab {
 			},
 
 			CSECT: (source: string, split: SicSplit): void => {
-				this.current.extDefTab[split.tag] = this.current.useTab.aloc;
 				this.addLst(new SicLstEntry(source));
 				this.csect(split.tag);
 			},
 
 			EXTDEF: (source: string, split: SicSplit): void => {
+				const s = split.args.split(",");
 				this.addLst(new SicLstEntry(source));
-				this.current.extDefTab[split.tag] = this.current.useTab.aloc;
+				s.forEach(r => {
+					if (this.current.tagTab[r] === undefined) {
+						throw new Error(r + " does not exist in the symbol table. Did you try to forward reference it?");
+					}
+					this.current.extDefTab.add(r);
+				});
 			},
 
 			EXTREF: (source: string, split: SicSplit): void => {
 				const s = split.args.split(",");
 				this.addLst(new SicLstEntry(source));
-				this.current.extRefTab = this.current.extRefTab.concat(split.args.split(","));
-				s.forEach(r => this.current.tagTab[r] = 0);
+				s.forEach(r => {
+					if (this.current.extRefTab.has(r)) {
+						throw new Error("Duplicate EXTREF " + r);
+					}
+					if (this.current.tagTab[r] !== undefined) {
+						throw new Error("Duplicate label " + r);
+					}
+					this.current.extRefTab.add(r);
+				});
 			},
 		};
 	}
@@ -1759,12 +1785,22 @@ export class SicCsectTab {
 			return "H" + name + " " + asWord(loc) + asWord(len);
 		};
 
-		const mkD = (defs: { [key: string]: number }): string => {
-			return "D" + Object.keys(defs).reduce((a, v) => a + v + asWord(defs[v]), "");
+		const mkD = (defs: Set<string>, tagTab: { [key: string]: number }): string => {
+			if (defs.size === 0) {
+				return "";
+			}
+			let a = "D";
+			defs.forEach(v => a += v + asWord(tagTab[v]), "");
+			return a;
 		};
 
-		const mkR = (refs: string[]): string => {
-			return "R" + Object.keys(refs).reduce((a, v) => a + v + " ").trim();
+		const mkR = (refs: Set<string>): string => {
+			if (refs.size === 0) {
+				return "";
+			}
+			let a = "R";
+			refs.forEach(v => a += v + " ", "");
+			return a.trim();
 		};
 
 		const mkT = (arr: SicLstEntry[]): string[] => {
@@ -1783,6 +1819,12 @@ export class SicCsectTab {
 				return "E";
 			}
 			return "E" + asWord(loc);
+		};
+
+		const mkM = (modrec: Array<{loc: number, len: number, symbol: string}>): string[] => {
+			return modrec.map(m => {
+				return "M" + asWord(m.loc) + asByte(m.len) + "+" + m.symbol;
+			});
 		};
 
 		const getLen = (a: SicLstEntry[]): number => {
@@ -1809,28 +1851,22 @@ export class SicCsectTab {
 		const sname = this.startData !== undefined ? this.startData.name : "";
 
 		s.push(mkH(getLen(this.csects[""].lst), sloc, sname));
-		if (Object.keys(this.csects[""].extDefTab).length !== 0) {
-			s.push(mkD(this.csects[""].extDefTab));
-		}
-		if (Object.keys(this.csects[""].extRefTab).length !== 0) {
-			s.push(mkR(this.csects[""].extRefTab));
-		}
+		s.push(mkD(this.csects[""].extDefTab, this.csects[""].tagTab));
+		s.push(mkR(this.csects[""].extRefTab));
 		s = s.concat(mkT(this.csects[""].lst));
+		s = s.concat(mkM(this.csects[""].modRecs));
 		s.push(mkE(sloc));
 
 		this.forEachAux((c, n) => {
 			s.push(mkH(getLen(c.lst), 0, n));
-			if (Object.keys(c.extDefTab).length !== 0) {
-				s.push(mkD(c.extDefTab));
-			}
-			if (Object.keys(c.extRefTab).length !== 0) {
-				s.push(mkR(c.extRefTab));
-			}
+			s.push(mkD(c.extDefTab, c.tagTab));
+			s.push(mkR(c.extRefTab));
 			s = s.concat(mkT(c.lst));
+			s = s.concat(mkM(c.modRecs));
 			s.push(mkE());
 		});
 
-		return s;
+		return s.filter(r => r !== "");
 	}
 
 	public get current(): SicCsect {
@@ -1932,7 +1968,10 @@ export class SicCompiler {
 				}
 
 				// if this line has a label, add it to the label tab
-				if (split.tag !== undefined) {
+				if (split.tag !== "") {
+					if (this.ctab.current.tagTab[split.tag] !== undefined) {
+						throw new Error("Duplicate label " + split.tag);
+					}
 					this.ctab.current.tagTab[split.tag] = this.ctab.current.useTab.aloc;
 				}
 
@@ -1951,13 +1990,13 @@ export class SicCompiler {
 					instr = new SicFormat2(split);
 				}
 				else if (SicFormat3.isFormat3(split.op)) {
-					instr = new SicFormat3(split, this.ctab.current.litTab, this.ctab.current.base);
+					instr = new SicFormat3(split, this.ctab.current);
 				}
 				else if (SicFormat4.isFormat4(split.op)) {
-					instr = new SicFormat4(split, this.ctab.current.litTab);
+					instr = new SicFormat4(split, this.ctab.current);
 				}
 				else if (SicFormatLegacy.isFormatLegacy(split.op)) {
-					instr = new SicFormatLegacy(split, this.ctab.current.litTab);
+					instr = new SicFormatLegacy(split, this.ctab.current);
 				}
 				else if (SicSpace.isSpace(split.op)) {
 					instr = new SicSpace(split);
