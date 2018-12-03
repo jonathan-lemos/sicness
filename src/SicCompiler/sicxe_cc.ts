@@ -3,74 +3,12 @@
  *
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
-*/
+ */
 
 // TODO: expression parser
 
 // comments are for suckers
 // if it was hard to write it should be hard to read
-
-/**
- * Converts a number to its hexadecimal string equivalent.
- */
-export const asHex = (n: number): string => n.toString(16).toUpperCase();
-
-/**
- * Converts a number to its hexadecimal word (3-byte) equivalent.
- */
-export const asWord = (n: number): string => asHex(n).padStart(6, "0");
-
-/**
- * Converts a number to its hexadecimal byte equivalent.
- */
-export const asByte = (n: number): string => asHex(n).padStart(2, "0");
-
-/**
- * Converts an array of bytes into a single hexadecimal string.
- */
-export const bytesToString = (n: number[]): string => n.reduce((acc: string, val: number) => acc + asByte(val), "");
-
-/**
- * Creates a bitmask of n bits.
- * @param nBits The number of bits (starting from the right) that should be toggled on.
- * For example, sicMakeMask(11) === 0x7FF
- */
-export const sicMakeMask = (nBits: number): number => {
-	let m = 0x0;
-	for (let i = 0; i < nBits; ++i) {
-		m |= (1 << i);
-	}
-	return m;
-};
-
-/**
- * Checks that a number fits into an unsigned n-bit range, throwing an exception if it doesn't.
- * @param val The number to check.
- * @param nBits The number of bits it should fit into.
- */
-export const sicCheckUnsigned = (val: number, nBits: number): void => {
-	if (val < 0x0 || val > sicMakeMask(nBits)) {
-		throw new Error(asHex(val) + " does not fit in an unsigned " + nBits + "-bit range");
-	}
-};
-
-/**
- * Optionally converts a signed value into its n-bit unsigned equivalent,
- * and checks if the result fits into a signed n-bit range.
- * @param val The number to create an unsigned value for.
- * @param nBits The number of signed bits the value should fit in.
- * @returns The new unsigned value.
- */
-export const sicMakeUnsigned = (val: number, nBits: number): number => {
-	const m = sicMakeMask(nBits - 1);
-	if (val < -m - 1 || val > m) {
-		throw new Error(asHex(val) + " does not fit in a signed " + nBits + "-bit range");
-	}
-
-	val >>>= 0;
-	val &= sicMakeMask(nBits);
-	return val;
-};
 
 /**
  * Class that splits a raw line of code into its label, operand, and optional arguments.
