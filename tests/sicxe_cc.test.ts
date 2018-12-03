@@ -1,93 +1,107 @@
 import { expect } from "chai";
-import * as cc from "../src/sicxe_cc";
+import { SicBase } from "../src/SicCompiler/SicBase";
+import { SicCompiler } from "../src/SicCompiler/SicCompiler";
+import { SicCsect } from "../src/SicCompiler/SicCsect";
+import { asByte, asHex, asWord, bytesToString } from "../src/SicCompiler/SicFmt";
+import { SicFormat1 } from "../src/SicCompiler/SicFormat1";
+import { SicFormat2 } from "../src/SicCompiler/SicFormat2";
+import { SicFormat3 } from "../src/SicCompiler/SicFormat3";
+import { SicFormat4 } from "../src/SicCompiler/SicFormat4";
+import { SicFormatLegacy } from "../src/SicCompiler/SicFormatLegacy";
+import { SicLitTab } from "../src/SicCompiler/SicLitTab";
+import { SicOpAddrType, SicOperandAddr, SicOpType } from "../src/SicCompiler/SicOperandAddr";
+import { SicPending } from "../src/SicCompiler/SicPending";
+import { SicSpace } from "../src/SicCompiler/SicSpace";
+import { SicSplit } from "../src/SicCompiler/SicSplit";
+import { sicCheckUnsigned, sicMakeMask, sicMakeUnsigned } from "../src/SicCompiler/SicUnsigned";
 
 describe("Number to string tests", () => {
 	it("converts to hex correctly", () => {
-		expect(cc.asHex(0x63)).to.equal("63");
-		expect(cc.asHex(255)).to.equal("FF");
-		expect(cc.asHex(1234)).to.equal("4D2");
+		expect(asHex(0x63)).to.equal("63");
+		expect(asHex(255)).to.equal("FF");
+		expect(asHex(1234)).to.equal("4D2");
 	});
 
 	it("converts a number to a byte correctly", () => {
-		expect(cc.asByte(0x63)).to.equal("63");
-		expect(cc.asByte(255)).to.equal("FF");
-		expect(cc.asByte(15)).to.equal("0F");
+		expect(asByte(0x63)).to.equal("63");
+		expect(asByte(255)).to.equal("FF");
+		expect(asByte(15)).to.equal("0F");
 	});
 
 	it("converts a number to a word correctly", () => {
-		expect(cc.asWord(0x63)).to.equal("000063");
-		expect(cc.asWord(16777215)).to.equal("FFFFFF");
-		expect(cc.asWord(1234)).to.equal("0004D2");
+		expect(asWord(0x63)).to.equal("000063");
+		expect(asWord(16777215)).to.equal("FFFFFF");
+		expect(asWord(1234)).to.equal("0004D2");
 	});
 
 	it("reduces a byte array to a string correctly", () => {
-		expect(cc.bytesToString([0x12, 0x34, 0x56, 0x78, 0x9A])).to.equal("123456789A");
-		expect(cc.bytesToString([0x0A, 0x0B, 255, 1])).to.equal("0A0BFF01");
+		expect(bytesToString([0x12, 0x34, 0x56, 0x78, 0x9A])).to.equal("123456789A");
+		expect(bytesToString([0x0A, 0x0B, 255, 1])).to.equal("0A0BFF01");
 	});
 });
 
 describe("SicUnsigned tests", () => {
 	it("creates bitmasks correctly", () => {
-		expect(cc.sicMakeMask(7)).to.equal(0x7F);
-		expect(cc.sicMakeMask(8)).to.equal(0xFF);
-		expect(cc.sicMakeMask(12)).to.equal(0xFFF);
-		expect(cc.sicMakeMask(16)).to.equal(0xFFFF);
+		expect(sicMakeMask(7)).to.equal(0x7F);
+		expect(sicMakeMask(8)).to.equal(0xFF);
+		expect(sicMakeMask(12)).to.equal(0xFFF);
+		expect(sicMakeMask(16)).to.equal(0xFFFF);
 	});
 
 	it("validates unsigned values correctly", () => {
-		expect(() => cc.sicCheckUnsigned(255, 8)).not.to.throw();
-		expect(() => cc.sicCheckUnsigned(256, 8)).to.throw();
-		expect(() => cc.sicCheckUnsigned(0, 8)).not.to.throw();
-		expect(() => cc.sicCheckUnsigned(65535, 16)).not.to.throw();
+		expect(() => sicCheckUnsigned(255, 8)).not.to.throw();
+		expect(() => sicCheckUnsigned(256, 8)).to.throw();
+		expect(() => sicCheckUnsigned(0, 8)).not.to.throw();
+		expect(() => sicCheckUnsigned(65535, 16)).not.to.throw();
 	});
 
 	it("converts signed values to unsigned correctly", () => {
-		expect(cc.sicMakeUnsigned(0x7F, 8)).to.equal(0x7F);
-		expect(() => cc.sicMakeUnsigned(0x80, 8)).to.throw();
-		expect(cc.sicMakeUnsigned(-0x80, 8)).to.equal(0x80);
-		expect(() => cc.sicMakeUnsigned(-0x81, 8)).to.throw();
-		expect(cc.sicMakeUnsigned(-0x80, 16)).to.equal(0xFF80);
+		expect(sicMakeUnsigned(0x7F, 8)).to.equal(0x7F);
+		expect(() => sicMakeUnsigned(0x80, 8)).to.throw();
+		expect(sicMakeUnsigned(-0x80, 8)).to.equal(0x80);
+		expect(() => sicMakeUnsigned(-0x81, 8)).to.throw();
+		expect(sicMakeUnsigned(-0x80, 16)).to.equal(0xFF80);
 	});
 });
 
 describe("SicSplit tests", () => {
 	it("handles basic statements correctly", () => {
-		const ss = new cc.SicSplit("\tLDA\tVAL");
+		const ss = new SicSplit("\tLDA\tVAL");
 		expect(ss.tag).to.equal("");
 		expect(ss.op).to.equal("LDA");
 		expect(ss.args).to.equal("VAL");
 	});
 
 	it("handles labels correctly", () => {
-		const ss = new cc.SicSplit("TAG\tLDA\tVAL");
+		const ss = new SicSplit("TAG\tLDA\tVAL");
 		expect(ss.tag).to.equal("TAG");
 		expect(ss.op).to.equal("LDA");
 		expect(ss.args).to.equal("VAL");
 	});
 
 	it("handles 2 arguments without spaces correctly", () => {
-		const ss = new cc.SicSplit("\tRMO A,B");
+		const ss = new SicSplit("\tRMO A,B");
 		expect(ss.tag).to.equal("");
 		expect(ss.op).to.equal("RMO");
 		expect(ss.args).to.equal("A,B");
 	});
 
 	it("handles 2 arguments with spaces correctly", () => {
-		const ss = new cc.SicSplit("\tRMO\tA, B");
+		const ss = new SicSplit("\tRMO\tA, B");
 		expect(ss.tag).to.equal("");
 		expect(ss.op).to.equal("RMO");
 		expect(ss.args).to.equal("A,B");
 	});
 
 	it("handles 0 arguments correctly", () => {
-		const ss = new cc.SicSplit("\tFIX");
+		const ss = new SicSplit("\tFIX");
 		expect(ss.tag).to.equal("");
 		expect(ss.op).to.equal("FIX");
 		expect(ss.args).to.equal("");
 	});
 
 	it("handles lowercase arguments correctly", () => {
-		const ss = new cc.SicSplit("tag\tlda\ta");
+		const ss = new SicSplit("tag\tlda\ta");
 		expect(ss.tag).to.equal("TAG");
 		expect(ss.op).to.equal("LDA");
 		expect(ss.args).to.equal("A");
@@ -99,19 +113,19 @@ describe("SicPending tests", () => {
 		VAL: 0x123,
 	};
 
-	const litTab = new cc.SicLitTab();
+	const litTab = new SicLitTab();
 	litTab.add(0x123);
 	litTab.createOrg(0x456);
 
 	it("handles tags correctly", () => {
-		const sp = new cc.SicPending("VAL");
+		const sp = new SicPending("VAL");
 		expect(sp.isTag()).to.equal(true);
 		expect(sp.isLiteral()).to.equal(false);
 		expect(sp.convert(tagTab, litTab)).to.equal(0x123);
 	});
 
 	it("handles literals correctly", () => {
-		const sp = new cc.SicPending(0x123);
+		const sp = new SicPending(0x123);
 		expect(sp.isTag()).to.equal(false);
 		expect(sp.isLiteral()).to.equal(true);
 		expect(sp.convert(tagTab, litTab)).to.equal(0x456);
@@ -120,20 +134,20 @@ describe("SicPending tests", () => {
 
 describe("SicBase tests", () => {
 	it("handles straight numbers correctly", () => {
-		const b = new cc.SicBase(0x10);
+		const b = new SicBase(0x10);
 		expect(b.ready()).to.equal(true);
 		expect(b.val).to.equal(0x10);
 	});
 
 	it("handles sicpending correctly", () => {
-		const p = new cc.SicPending("VAL");
+		const p = new SicPending("VAL");
 		const tagTab: {[key: string]: number} = {
 			VAL: 0x123,
 		};
 		const litTab: {[key: number]: number} = {
 			0x100: 0x200,
 		};
-		const b = new cc.SicBase(p);
+		const b = new SicBase(p);
 		expect(b.ready()).to.equal(false);
 		b.makeReady(tagTab);
 		expect(b.ready()).to.equal(true);
@@ -141,136 +155,136 @@ describe("SicBase tests", () => {
 	});
 
 	it("handles literals correctly", () => {
-		const p = new cc.SicPending(0x10);
-		const b = new cc.SicBase(p);
+		const p = new SicPending(0x10);
+		const b = new SicBase(p);
 		expect(b.ready()).to.equal(true);
 		expect(b.val as number).to.equal(0x10);
 	});
 });
 
 describe("SicOperandAddr tests", () => {
-	const csect = new cc.SicCsect(0);
+	const csect = new SicCsect(0);
 
 	it("handles format 3 arguments correctly", () => {
-		const form3 = new cc.SicOperandAddr("VAL", cc.SicOpType.f3, csect);
-		expect(form3.addr).to.equal(cc.SicOpAddrType.direct);
+		const form3 = new SicOperandAddr("VAL", SicOpType.f3, csect);
+		expect(form3.addr).to.equal(SicOpAddrType.direct);
 		expect(form3.pcrel).to.equal(true);
 		expect(form3.base).to.equal(undefined);
 		expect(form3.indexed).to.equal(false);
-		expect(form3.type).to.equal(cc.SicOpType.f3);
-		expect((form3.val as cc.SicPending).val).to.equal("VAL");
+		expect(form3.type).to.equal(SicOpType.f3);
+		expect((form3.val as SicPending).val).to.equal("VAL");
 	});
 
 	it("handles sic legacy arguments correctly", () => {
-		const legacy = new cc.SicOperandAddr("AAA", cc.SicOpType.legacy, csect);
-		expect(legacy.addr).to.equal(cc.SicOpAddrType.direct);
+		const legacy = new SicOperandAddr("AAA", SicOpType.legacy, csect);
+		expect(legacy.addr).to.equal(SicOpAddrType.direct);
 		expect(legacy.pcrel).to.equal(false);
 		expect(legacy.base).to.equal(undefined);
 		expect(legacy.indexed).to.equal(false);
-		expect(legacy.type).to.equal(cc.SicOpType.legacy);
-		expect((legacy.val as cc.SicPending).val).to.equal("AAA");
+		expect(legacy.type).to.equal(SicOpType.legacy);
+		expect((legacy.val as SicPending).val).to.equal("AAA");
 	});
 
 	it("handles format 4 arguments correctly", () => {
-		const form4 = new cc.SicOperandAddr("BBB", cc.SicOpType.f4, csect);
-		expect(form4.addr).to.equal(cc.SicOpAddrType.direct);
+		const form4 = new SicOperandAddr("BBB", SicOpType.f4, csect);
+		expect(form4.addr).to.equal(SicOpAddrType.direct);
 		expect(form4.pcrel).to.equal(false);
 		expect(form4.base).to.equal(undefined);
 		expect(form4.indexed).to.equal(false);
-		expect(form4.type).to.equal(cc.SicOpType.f4);
-		expect((form4.val as cc.SicPending).val).to.equal("BBB");
+		expect(form4.type).to.equal(SicOpType.f4);
+		expect((form4.val as SicPending).val).to.equal("BBB");
 	});
 
 	it("handles indirect arguments correctly", () => {
-		const indirect = new cc.SicOperandAddr("@VAL", cc.SicOpType.f3, csect);
-		expect(indirect.addr).to.equal(cc.SicOpAddrType.indirect);
+		const indirect = new SicOperandAddr("@VAL", SicOpType.f3, csect);
+		expect(indirect.addr).to.equal(SicOpAddrType.indirect);
 		expect(indirect.pcrel).to.equal(true);
 		expect(indirect.base).to.equal(undefined);
 		expect(indirect.indexed).to.equal(false);
-		expect(indirect.type).to.equal(cc.SicOpType.f3);
-		expect((indirect.val as cc.SicPending).val).to.equal("VAL");
+		expect(indirect.type).to.equal(SicOpType.f3);
+		expect((indirect.val as SicPending).val).to.equal("VAL");
 	});
 
 	it("handles immediate arguments correctly", () => {
-		const immediate = new cc.SicOperandAddr("#VAL", cc.SicOpType.f3, csect);
-		expect(immediate.addr).to.equal(cc.SicOpAddrType.immediate);
+		const immediate = new SicOperandAddr("#VAL", SicOpType.f3, csect);
+		expect(immediate.addr).to.equal(SicOpAddrType.immediate);
 		expect(immediate.pcrel).to.equal(true);
 		expect(immediate.base).to.equal(undefined);
 		expect(immediate.indexed).to.equal(false);
-		expect(immediate.type).to.equal(cc.SicOpType.f3);
-		expect((immediate.val as cc.SicPending).val).to.equal("VAL");
+		expect(immediate.type).to.equal(SicOpType.f3);
+		expect((immediate.val as SicPending).val).to.equal("VAL");
 	});
 
 	it("handles numeric arguments correctly", () => {
-		const immNumber = new cc.SicOperandAddr("#X'100'", cc.SicOpType.f3, csect);
-		expect(immNumber.addr).to.equal(cc.SicOpAddrType.immediate);
+		const immNumber = new SicOperandAddr("#X'100'", SicOpType.f3, csect);
+		expect(immNumber.addr).to.equal(SicOpAddrType.immediate);
 		expect(immNumber.pcrel).to.equal(false);
 		expect(immNumber.base).to.equal(undefined);
 		expect(immNumber.indexed).to.equal(false);
-		expect(immNumber.type).to.equal(cc.SicOpType.f3);
+		expect(immNumber.type).to.equal(SicOpType.f3);
 		expect(immNumber.val).to.equal(0x100);
 	});
 
 	it("handles literal arguments correctly", () => {
-		const literal = new cc.SicOperandAddr("=15", cc.SicOpType.f3, csect);
-		expect(literal.addr).to.equal(cc.SicOpAddrType.direct);
+		const literal = new SicOperandAddr("=15", SicOpType.f3, csect);
+		expect(literal.addr).to.equal(SicOpAddrType.direct);
 		expect(literal.pcrel).to.equal(true);
 		expect(literal.base).to.equal(undefined);
 		expect(literal.indexed).to.equal(false);
-		expect(literal.type).to.equal(cc.SicOpType.f3);
-		expect((literal.val as cc.SicPending).val).to.equal(15);
+		expect(literal.type).to.equal(SicOpType.f3);
+		expect((literal.val as SicPending).val).to.equal(15);
 
 		expect(csect.litTab.hasPending(15)).to.equal(true);
 	});
 
 	it("handles baserel format 3 arguments correctly", () => {
-		csect.base = new cc.SicBase(8);
-		const baserel = new cc.SicOperandAddr("VAL", cc.SicOpType.f3, csect);
-		expect(baserel.addr).to.equal(cc.SicOpAddrType.direct);
+		csect.base = new SicBase(8);
+		const baserel = new SicOperandAddr("VAL", SicOpType.f3, csect);
+		expect(baserel.addr).to.equal(SicOpAddrType.direct);
 		// both pcrel and baserel are supposed to be true
 		// makeReady() tries pcrel and then baserel
 		expect(baserel.pcrel).to.equal(true);
-		expect((baserel.base as cc.SicBase).val).to.equal(8);
+		expect((baserel.base as SicBase).val).to.equal(8);
 		expect(baserel.indexed).to.equal(false);
-		expect(baserel.type).to.equal(cc.SicOpType.f3);
-		expect((baserel.val as cc.SicPending).val).to.equal("VAL");
+		expect(baserel.type).to.equal(SicOpType.f3);
+		expect((baserel.val as SicPending).val).to.equal("VAL");
 	});
 
 	csect.base = undefined;
 
 	it("drops baserel/pcrel on format4 arguments correctly", () => {
-		csect.base = new cc.SicBase(8);
-		const baserel = new cc.SicOperandAddr("VAL", cc.SicOpType.f4, csect);
-		expect(baserel.addr).to.equal(cc.SicOpAddrType.direct);
+		csect.base = new SicBase(8);
+		const baserel = new SicOperandAddr("VAL", SicOpType.f4, csect);
+		expect(baserel.addr).to.equal(SicOpAddrType.direct);
 		expect(baserel.pcrel).to.equal(false);
 		expect(baserel.base).to.equal(undefined);
 		expect(baserel.indexed).to.equal(false);
-		expect(baserel.type).to.equal(cc.SicOpType.f4);
-		expect((baserel.val as cc.SicPending).val).to.equal("VAL");
+		expect(baserel.type).to.equal(SicOpType.f4);
+		expect((baserel.val as SicPending).val).to.equal("VAL");
 	});
 
 	it("handles indexed arguments correctly", () => {
 		csect.base = undefined;
-		const indexed = new cc.SicOperandAddr("TAG,X", cc.SicOpType.f3, csect);
-		expect(indexed.addr).to.equal(cc.SicOpAddrType.direct);
+		const indexed = new SicOperandAddr("TAG,X", SicOpType.f3, csect);
+		expect(indexed.addr).to.equal(SicOpAddrType.direct);
 		expect(indexed.pcrel).to.equal(true);
 		expect(indexed.base).to.equal(undefined);
 		expect(indexed.indexed).to.equal(true);
-		expect(indexed.type).to.equal(cc.SicOpType.f3);
-		expect((indexed.val as cc.SicPending).val).to.equal("TAG");
+		expect(indexed.type).to.equal(SicOpType.f3);
+		expect((indexed.val as SicPending).val).to.equal("TAG");
 	});
 
 	it("throws on invalid arguments", () => {
-		expect(() => new cc.SicOperandAddr("VAL,VAL2", cc.SicOpType.f3, csect)).to.throw();
-		expect(() => new cc.SicOperandAddr("@VAL", cc.SicOpType.legacy, csect)).to.throw();
-		expect(() => new cc.SicOperandAddr("$$AQQ", cc.SicOpType.f3, csect)).to.throw();
+		expect(() => new SicOperandAddr("VAL,VAL2", SicOpType.f3, csect)).to.throw();
+		expect(() => new SicOperandAddr("@VAL", SicOpType.legacy, csect)).to.throw();
+		expect(() => new SicOperandAddr("$$AQQ", SicOpType.f3, csect)).to.throw();
 	});
 });
 
 describe("SicFormat1 tests", () => {
 	it("handles basic format1 arguments correctly", () => {
-		const splitGood = new cc.SicSplit("\tFIX");
-		const f1 = new cc.SicFormat1(splitGood);
+		const splitGood = new SicSplit("\tFIX");
+		const f1 = new SicFormat1(splitGood);
 		expect(f1.bc.mnemonic).to.equal("FIX");
 		expect(f1.length()).to.equal(1);
 		expect(f1.ready()).to.equal(true);
@@ -278,17 +292,17 @@ describe("SicFormat1 tests", () => {
 	});
 
 	it("throws on invalid format 1 arguments", () => {
-		const splitBad1 = new cc.SicSplit("\tLDA");
-		const splitBad2 = new cc.SicSplit("\tFIX A");
-		expect(() => new cc.SicFormat1(splitBad1)).to.throw();
-		expect(() => new cc.SicFormat1(splitBad2)).to.throw();
+		const splitBad1 = new SicSplit("\tLDA");
+		const splitBad2 = new SicSplit("\tFIX A");
+		expect(() => new SicFormat1(splitBad1)).to.throw();
+		expect(() => new SicFormat1(splitBad2)).to.throw();
 	});
 });
 
 describe("SicFormat2 tests", () => {
 	it("handles basic format2 arguments correctly", () => {
-		const splitGood = new cc.SicSplit("\tSHIFTL B, 4");
-		const f2 = new cc.SicFormat2(splitGood);
+		const splitGood = new SicSplit("\tSHIFTL B, 4");
+		const f2 = new SicFormat2(splitGood);
 		expect(f2.bc.mnemonic).to.equal("SHIFTL");
 		expect(f2.length()).to.equal(2);
 		expect(f2.ready()).to.equal(true);
@@ -296,22 +310,22 @@ describe("SicFormat2 tests", () => {
 	});
 
 	it("throws on invalid format2 arguments", () => {
-		const splitBad1 = new cc.SicSplit("\tSHIFTL");
-		const splitBad2 = new cc.SicSplit("\tLDA B, 4");
-		expect(() => new cc.SicFormat2(splitBad1)).to.throw();
-		expect(() => new cc.SicFormat2(splitBad2)).to.throw();
+		const splitBad1 = new SicSplit("\tSHIFTL");
+		const splitBad2 = new SicSplit("\tLDA B, 4");
+		expect(() => new SicFormat2(splitBad1)).to.throw();
+		expect(() => new SicFormat2(splitBad2)).to.throw();
 	});
 });
 
 describe("SicFormat3 tests", () => {
-	const csect = new cc.SicCsect(0);
+	const csect = new SicCsect(0);
 	csect.tagTab = {
 		VAL: 0x123,
 	};
 
 	it("handles pcrel forward correctly", () => {
-		const split = new cc.SicSplit("AAA\tLDX VAL .comment");
-		const f3 = new cc.SicFormat3(split, csect);
+		const split = new SicSplit("AAA\tLDX VAL .comment");
+		const f3 = new SicFormat3(split, csect);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
@@ -326,8 +340,8 @@ describe("SicFormat3 tests", () => {
 	});
 
 	it("handles pcrel backward correctly", () => {
-		const split = new cc.SicSplit("BBB\tLDX VAL");
-		const f3 = new cc.SicFormat3(split, csect);
+		const split = new SicSplit("BBB\tLDX VAL");
+		const f3 = new SicFormat3(split, csect);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
@@ -342,8 +356,8 @@ describe("SicFormat3 tests", () => {
 	});
 
 	it("handles indirect arguments correctly", () => {
-		const split = new cc.SicSplit("\tLDX @VAL");
-		const f3 = new cc.SicFormat3(split, csect);
+		const split = new SicSplit("\tLDX @VAL");
+		const f3 = new SicFormat3(split, csect);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
@@ -358,8 +372,8 @@ describe("SicFormat3 tests", () => {
 	});
 
 	it("handles immediate arguments correctly", () => {
-		const split = new cc.SicSplit("\tLDX #VAL");
-		const f3 = new cc.SicFormat3(split, csect);
+		const split = new SicSplit("\tLDX #VAL");
+		const f3 = new SicFormat3(split, csect);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
@@ -374,16 +388,16 @@ describe("SicFormat3 tests", () => {
 	});
 
 	it("handles literal arguments correctly", () => {
-		const split = new cc.SicSplit("\tLDX =X'1CD'");
-		const split2 = new cc.SicSplit("\tLDX =X'1CE'");
-		const split3 = new cc.SicSplit("\tLDX =461"); // 0x1CD
-		csect.litTab = new cc.SicLitTab();
+		const split = new SicSplit("\tLDX =X'1CD'");
+		const split2 = new SicSplit("\tLDX =X'1CE'");
+		const split3 = new SicSplit("\tLDX =461"); // 0x1CD
+		csect.litTab = new SicLitTab();
 
-		const ft1 = new cc.SicFormat3(split, csect);
+		const ft1 = new SicFormat3(split, csect);
 		expect(csect.litTab.hasPending(0x1CD)).to.equal(true);
-		const ft2 = new cc.SicFormat3(split2, csect);
+		const ft2 = new SicFormat3(split2, csect);
 		expect(csect.litTab.hasPending(0x1CE)).to.equal(true);
-		const ft3 = new cc.SicFormat3(split3, csect);
+		const ft3 = new SicFormat3(split3, csect);
 		expect(csect.litTab.hasPending(0x1CD)).to.equal(true);
 
 		csect.litTab.createOrg(0x2AB);
@@ -421,14 +435,14 @@ describe("SicFormat3 tests", () => {
 		expect(ft3.toBytes()).to.eql([0x07, 0x21, 0xA2]);
 	});
 
-	csect.litTab = new cc.SicLitTab();
+	csect.litTab = new SicLitTab();
 
 	it("handles baserel arguments correctly", () => {
-		const splitFar = new cc.SicSplit("\tLDX X'9FF'");
-		const splitNear = new cc.SicSplit("\tLDX X'200'");
-		csect.base = new cc.SicBase(0x300);
-		const f3Far = new cc.SicFormat3(splitFar, csect);
-		const f3Near = new cc.SicFormat3(splitNear, csect);
+		const splitFar = new SicSplit("\tLDX X'9FF'");
+		const splitNear = new SicSplit("\tLDX X'200'");
+		csect.base = new SicBase(0x300);
+		const f3Far = new SicFormat3(splitFar, csect);
+		const f3Near = new SicFormat3(splitNear, csect);
 
 		expect(f3Far.length()).to.equal(3);
 		expect(f3Far.ready()).to.equal(false);
@@ -456,8 +470,8 @@ describe("SicFormat3 tests", () => {
 	csect.base = undefined;
 
 	it("handles indexed arguments correctly", () => {
-		const split = new cc.SicSplit("\tLDX VAL,X");
-		const f3 = new cc.SicFormat3(split, csect);
+		const split = new SicSplit("\tLDX VAL,X");
+		const f3 = new SicFormat3(split, csect);
 
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
@@ -472,34 +486,34 @@ describe("SicFormat3 tests", () => {
 	});
 
 	it("throws on invalid arguments", () => {
-		const splitBad1 = new cc.SicSplit("\t+LDA VAL");
-		const splitBad2 = new cc.SicSplit("\t*LDA VAL");
-		const splitBad3 = new cc.SicSplit("\tLDA A,B");
-		const splitBad4 = new cc.SicSplit("\tRMO A");
+		const splitBad1 = new SicSplit("\t+LDA VAL");
+		const splitBad2 = new SicSplit("\t*LDA VAL");
+		const splitBad3 = new SicSplit("\tLDA A,B");
+		const splitBad4 = new SicSplit("\tRMO A");
 
-		expect(() => new cc.SicFormat3(splitBad1, csect)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad2, csect)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad3, csect)).to.throw();
-		expect(() => new cc.SicFormat3(splitBad4, csect)).to.throw();
+		expect(() => new SicFormat3(splitBad1, csect)).to.throw();
+		expect(() => new SicFormat3(splitBad2, csect)).to.throw();
+		expect(() => new SicFormat3(splitBad3, csect)).to.throw();
+		expect(() => new SicFormat3(splitBad4, csect)).to.throw();
 	});
 });
 
 describe("SicFormatLegacy tests", () => {
-	const csect = new cc.SicCsect(0);
+	const csect = new SicCsect(0);
 	csect.tagTab = {
 		VAL: 0x123,
 	};
 
 	it("handles literal arguments correctly", () => {
-		const split = new cc.SicSplit("\t*LDX =X'1CD'");
-		const split2 = new cc.SicSplit("\t*LDX =X'1CE'");
-		const split3 = new cc.SicSplit("\t*LDX =461"); // 0x1CD
+		const split = new SicSplit("\t*LDX =X'1CD'");
+		const split2 = new SicSplit("\t*LDX =X'1CE'");
+		const split3 = new SicSplit("\t*LDX =461"); // 0x1CD
 
-		const ft1 = new cc.SicFormatLegacy(split, csect);
+		const ft1 = new SicFormatLegacy(split, csect);
 		expect(csect.litTab.hasPending(0x1CD)).to.equal(true);
-		const ft2 = new cc.SicFormatLegacy(split2, csect);
+		const ft2 = new SicFormatLegacy(split2, csect);
 		expect(csect.litTab.hasPending(0x1CE)).to.equal(true);
-		const ft3 = new cc.SicFormatLegacy(split3, csect);
+		const ft3 = new SicFormatLegacy(split3, csect);
 		expect(csect.litTab.hasPending(0x1CD)).to.equal(true);
 
 		csect.litTab.createOrg(0x2AB);
@@ -538,8 +552,8 @@ describe("SicFormatLegacy tests", () => {
 	});
 
 	it("handles indexed arguments correctly", () => {
-		const split = new cc.SicSplit("\t*LDX VAL,X");
-		const fL = new cc.SicFormatLegacy(split, csect);
+		const split = new SicSplit("\t*LDX VAL,X");
+		const fL = new SicFormatLegacy(split, csect);
 
 		expect(fL.length()).to.equal(3);
 		expect(fL.ready()).to.equal(false);
@@ -554,27 +568,27 @@ describe("SicFormatLegacy tests", () => {
 	});
 
 	it("throws on invalid arguments", () => {
-		const splitBad1 = new cc.SicSplit("\t+LDA VAL");
-		const splitBad2 = new cc.SicSplit("\tLDA VAL");
-		const splitBad3 = new cc.SicSplit("\t*LDA A,B");
-		const splitBad4 = new cc.SicSplit("\t*RMO A");
+		const splitBad1 = new SicSplit("\t+LDA VAL");
+		const splitBad2 = new SicSplit("\tLDA VAL");
+		const splitBad3 = new SicSplit("\t*LDA A,B");
+		const splitBad4 = new SicSplit("\t*RMO A");
 
-		expect(() => new cc.SicFormatLegacy(splitBad1, csect)).to.throw();
-		expect(() => new cc.SicFormatLegacy(splitBad2, csect)).to.throw();
-		expect(() => new cc.SicFormatLegacy(splitBad3, csect)).to.throw();
-		expect(() => new cc.SicFormatLegacy(splitBad4, csect)).to.throw();
+		expect(() => new SicFormatLegacy(splitBad1, csect)).to.throw();
+		expect(() => new SicFormatLegacy(splitBad2, csect)).to.throw();
+		expect(() => new SicFormatLegacy(splitBad3, csect)).to.throw();
+		expect(() => new SicFormatLegacy(splitBad4, csect)).to.throw();
 	});
 });
 
 describe("SicFormat4 tests", () => {
-	const csect = new cc.SicCsect(0);
+	const csect = new SicCsect(0);
 	csect.tagTab = {
 		VAL: 0x123,
 	};
 
 	it("handles indirect arguments correctly", () => {
-		const split = new cc.SicSplit("\t+LDX @VAL");
-		const f4 = new cc.SicFormat4(split, csect);
+		const split = new SicSplit("\t+LDX @VAL");
+		const f4 = new SicFormat4(split, csect);
 
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
@@ -589,8 +603,8 @@ describe("SicFormat4 tests", () => {
 	});
 
 	it("handles immediate arguments correctly", () => {
-		const split = new cc.SicSplit("\t+LDX #VAL");
-		const f4 = new cc.SicFormat4(split, csect);
+		const split = new SicSplit("\t+LDX #VAL");
+		const f4 = new SicFormat4(split, csect);
 
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
@@ -606,15 +620,15 @@ describe("SicFormat4 tests", () => {
 	});
 
 	it("handles literal arguments correctly", () => {
-		const split = new cc.SicSplit("\t+LDX =X'1CD'");
-		const split2 = new cc.SicSplit("\t+LDX =X'1CE'");
-		const split3 = new cc.SicSplit("\t+LDX =461"); // 0x1CD
+		const split = new SicSplit("\t+LDX =X'1CD'");
+		const split2 = new SicSplit("\t+LDX =X'1CE'");
+		const split3 = new SicSplit("\t+LDX =461"); // 0x1CD
 
-		const ft1 = new cc.SicFormat4(split, csect);
+		const ft1 = new SicFormat4(split, csect);
 		expect(csect.litTab.hasPending(0x1CD)).to.equal(true);
-		const ft2 = new cc.SicFormat4(split2, csect);
+		const ft2 = new SicFormat4(split2, csect);
 		expect(csect.litTab.hasPending(0x1CE)).to.equal(true);
-		const ft3 = new cc.SicFormat4(split3, csect);
+		const ft3 = new SicFormat4(split3, csect);
 		expect(csect.litTab.hasPending(0x1CD)).to.equal(true);
 
 		csect.litTab.createOrg(0x2AB);
@@ -656,8 +670,8 @@ describe("SicFormat4 tests", () => {
 	});
 
 	it("handles indexed arguments correctly", () => {
-		const split = new cc.SicSplit("\t+LDX VAL,X");
-		const f4 = new cc.SicFormat4(split, csect);
+		const split = new SicSplit("\t+LDX VAL,X");
+		const f4 = new SicFormat4(split, csect);
 
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
@@ -673,24 +687,24 @@ describe("SicFormat4 tests", () => {
 	});
 
 	it("throws on invalid arguments", () => {
-		const splitBad1 = new cc.SicSplit("\tLDA VAL");
-		const splitBad2 = new cc.SicSplit("\t*LDA VAL");
-		const splitBad3 = new cc.SicSplit("\t+LDA A,B");
-		const splitBad4 = new cc.SicSplit("\t+RMO A");
+		const splitBad1 = new SicSplit("\tLDA VAL");
+		const splitBad2 = new SicSplit("\t*LDA VAL");
+		const splitBad3 = new SicSplit("\t+LDA A,B");
+		const splitBad4 = new SicSplit("\t+RMO A");
 
-		expect(() => new cc.SicFormat4(splitBad1, csect)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad2, csect)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad3, csect)).to.throw();
-		expect(() => new cc.SicFormat4(splitBad4, csect)).to.throw();
+		expect(() => new SicFormat4(splitBad1, csect)).to.throw();
+		expect(() => new SicFormat4(splitBad2, csect)).to.throw();
+		expect(() => new SicFormat4(splitBad3, csect)).to.throw();
+		expect(() => new SicFormat4(splitBad4, csect)).to.throw();
 	});
 });
 
 describe("SicSpace tests", () => {
 	it("handles WORD/BYTE correctly", () => {
-		const splitWORD = new cc.SicSplit("\tWORD X'ABCD12'");
-		const splitBYTE = new cc.SicSplit("\tBYTE 12");
-		const w = new cc.SicSpace(splitWORD);
-		const b = new cc.SicSpace(splitBYTE);
+		const splitWORD = new SicSplit("\tWORD X'ABCD12'");
+		const splitBYTE = new SicSplit("\tBYTE 12");
+		const w = new SicSpace(splitWORD);
+		const b = new SicSpace(splitBYTE);
 
 		expect(w.length()).to.equal(3);
 		expect(w.toBytes()).to.eql([0xAB, 0xCD, 0x12]);
@@ -699,13 +713,13 @@ describe("SicSpace tests", () => {
 	});
 
 	it("throws on invalid arguments", () => {
-		const splitFail1 = new cc.SicSplit("\tLDA 4");
-		const splitFail2 = new cc.SicSplit("\tWORD");
-		const splitFail3 = new cc.SicSplit("\tBYTE 1,2");
+		const splitFail1 = new SicSplit("\tLDA 4");
+		const splitFail2 = new SicSplit("\tWORD");
+		const splitFail3 = new SicSplit("\tBYTE 1,2");
 
-		expect(() => new cc.SicSpace(splitFail1)).to.throw();
-		expect(() => new cc.SicSpace(splitFail2)).to.throw();
-		expect(() => new cc.SicSpace(splitFail3)).to.throw();
+		expect(() => new SicSpace(splitFail1)).to.throw();
+		expect(() => new SicSpace(splitFail2)).to.throw();
+		expect(() => new SicSpace(splitFail3)).to.throw();
 	});
 });
 
@@ -797,12 +811,12 @@ describe("SicCompiler tests", () => {
 	];
 
 	it("creates a correct lst for a sample program", () => {
-		const p1 = new cc.SicCompiler(lines);
+		const p1 = new SicCompiler(lines);
 		expect(p1.makeLst()).to.eql(lstExpect);
 	});
 
 	it("creates a correct obj for a sample program", () => {
-		const p1 = new cc.SicCompiler(lines);
+		const p1 = new SicCompiler(lines);
 		expect(p1.makeObj()).to.eql(objExpect);
 	});
 
@@ -841,7 +855,7 @@ describe("SicCompiler tests", () => {
 	];
 
 	it("interacts with csect properly", () => {
-		const p1 = new cc.SicCompiler(csectLines);
+		const p1 = new SicCompiler(csectLines);
 		expect(p1.makeLst()).to.eql(csectLst);
 		expect(p1.makeObj()).to.eql(csectObj);
 	});

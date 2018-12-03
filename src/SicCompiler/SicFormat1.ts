@@ -7,6 +7,7 @@
 
 import { ISicInstruction } from "./ISicInstruction";
 import { bytecodeTable, SicBytecode } from "./SicBytecode";
+import { SicLitTab } from "./SicLitTab";
 import { SicSplit } from "./SicSplit";
 
 /**

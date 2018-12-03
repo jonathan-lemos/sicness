@@ -5,6 +5,8 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
+import { SicLitTab } from "./SicLitTab";
+
 /**
  * Represents a "pending" value.
  * This can either be a label or a literal, both of which have to be resolved in pass 2.

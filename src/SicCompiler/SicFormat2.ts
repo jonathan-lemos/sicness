@@ -7,7 +7,10 @@
 
 import { ISicInstruction } from "./ISicInstruction";
 import { bytecodeTable, SicBytecode } from "./SicBytecode";
+import { SicLitTab } from "./SicLitTab";
+import { sicRegToDec } from "./SicRegConvert";
 import { SicSplit } from "./SicSplit";
+import { sicCheckUnsigned } from "./SicUnsigned";
 
 /**
  * A class representing a format 2 instruction.

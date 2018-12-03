@@ -5,7 +5,11 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
+import { SicBase } from "./SicBase";
+import { SicCsect } from "./SicCsect";
+import { SicLitTab } from "./SicLitTab";
 import { SicPending } from "./SicPending";
+import { sicCheckUnsigned, sicMakeUnsigned } from "./SicUnsigned";
 
 /**
  * Represents an addressing type for format 3/4 operands.

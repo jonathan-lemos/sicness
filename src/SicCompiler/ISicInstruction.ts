@@ -5,6 +5,8 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
+import { SicLitTab } from "./SicLitTab";
+
 /**
  * Interface detailing the methods any bytecode-representable instruction needs to have.
  */

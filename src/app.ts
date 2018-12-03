@@ -8,7 +8,7 @@
 import "ace";
 // import * as ace from "ace-builds";
 import "jquery";
-import * as cc from "./sicxe_cc";
+import { SicCompiler } from "./SicCompiler/SicCompiler";
 
 // ace.config.set("basePath", "/");
 // ace.config.set("modePath", "/");
@@ -32,7 +32,7 @@ const arrayToText = (array: string[]): string => {
 $("#btnCompile").click((): void => {
 	try {
 		const arr = textToArray(editor.getValue());
-		const comp = new cc.SicCompiler(arr);
+		const comp = new SicCompiler(arr);
 		let output = ["-----lst-----"];
 		output = output.concat(comp.makeLst());
 		if (!comp.err) {
