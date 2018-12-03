@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { SicCompiler } from "./sicxe_cc";
+import { SicCompiler } from "./SicCompiler/SicCompiler";
 
 const arrToString = (arr: string[]) => arr.reduce((acc: string, s: string) => acc + "\n" + s);
 
