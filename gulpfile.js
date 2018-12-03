@@ -17,7 +17,7 @@ var tsProject = tsc.createProject("tsconfig.json");
 
 gulp.task("build-app", function() {
     return gulp.src([
-        "src/*.ts",
+        "src/**/*.ts",
     ])
     .pipe(tsProject())
     .js.pipe(gulp.dest("dist"));
@@ -25,7 +25,7 @@ gulp.task("build-app", function() {
 
 gulp.task("lint", function() {
     return gulp.src([
-        "src/*.ts",
+        "src/**/*.ts",
         "tests/*.ts"
     ])
         .pipe(tslint({
