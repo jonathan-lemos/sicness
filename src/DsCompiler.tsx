@@ -9,8 +9,17 @@ import React from "react";
 import AceEditor from "react-ace";
 import { Col, Row } from "reactstrap";
 
-export default class ReactCompiler extends React.Component {
+export interface IDsCompilerProps {
+	keyboardHandler: "" | "vim" | "emacs";
+}
+
+export class DsCompiler extends React.Component<IDsCompilerProps> {
+	public static defaultProps: IDsCompilerProps = {
+		keyboardHandler: "",
+	};
+
 	public render() {
+		const q = <AceEditor/>;
 		return (
 			<Row
 				className="bg-dark flex d-flex justify-content-start flex-fill"
@@ -22,6 +31,7 @@ export default class ReactCompiler extends React.Component {
 						// onChange={onChange}
 						name="editor"
 						// editorProps={{$blockScrolling: true}}
+						keyboardHandler={this.props.keyboardHandler}
 						/>
 				</Col>
 				<Col>
