@@ -78,7 +78,7 @@ export class SicOperandAddr {
 		// Matches up to 3 characters in an argument (@'EOF')
 		const reChar = new RegExp("^(=|#|@)?C'(.{1,3})'(,X)?$");
 		// Matches a label argument (@VAL)
-		const reTag = new RegExp("^(#|@)?([A-Z]+)(,X)?$");
+		const reTag = new RegExp("^(#|@)?([A-Z0-9]+)(,X)?$");
 
 		// For all of the above regexes:
 		// match[0] === The raw input string
@@ -186,6 +186,15 @@ export class SicOperandAddr {
 				// Set this value to a new SicPending corresponding to the label.
 				this.val = new SicPending(match[2]);
 			}
+		}
+		else if (arg.trim() === "") {
+			this.val = 0;
+			this.pcrel = false;
+			this.base = undefined;
+			this.addr = SicOpAddrType.direct;
+			this.indexed = false;
+			this.rdy = true;
+			return;
 		}
 		else {
 			throw new Error("Operand " + arg + " is not of any valid format.");
