@@ -28,6 +28,7 @@ A work-in-progress online SIC/XE assembler/debugger written in Typescript (ES6)/
 * Fix LTORG/EQU/\*
 
 ### Website:
+* Stop pulling in jquery in the source as it is linked elsewhere.
 * Add static analysis.
 * Add a tabbed setup to switch between assembler and debugger.
 
@@ -59,12 +60,6 @@ npm start path/to/asm
 The browser js file can be built with the following command:
 ```shell
 npx gulp
-```
-
-The built file can then be moved to the website with:
-```shell
-rm docs/sicness.min.js
-cp dist/sicness.min.js docs
 ```
 
 ### Testing the project

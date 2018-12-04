@@ -37,7 +37,7 @@ gulp.task("lint", function() {
 gulp.task("bundle", function() {
     var libraryName = "sicness";
     var mainTsFilePath = "dist/app.js";
-    var outputFolder = "dist/";
+    var outputFolder = "docs/";
     var outputFileName = libraryName + ".min.js";
 
     var bundler = browserify({

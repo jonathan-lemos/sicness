@@ -60,7 +60,7 @@ ace.define("ace/mode/sicxe_highlight_rules", ["require", "exports", "module", "a
 				},
 				{
 					token: 'variable.parameter.register.assembly',
-					regex: '\\s+(?:A|B|L|PC|SW|B|S|T|F)\\b',
+					regex: '\\b(?:A|B|L|PC|SW|B|S|T|F)\\b',
 					caseInsensitive: true
 				},
 				{

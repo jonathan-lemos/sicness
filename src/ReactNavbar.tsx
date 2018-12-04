@@ -8,12 +8,27 @@
 import React from "react";
 import { Navbar, NavbarBrand } from "reactstrap";
 
-export default class ReactNavbar extends React.Component<
-	{
-		brand: string;
-		font: string;
+export interface IReactNavbarProps {
+	brand: string;
+	font: string;
+	href: string;
+}
+
+export interface IReactNavbarState {
+	active: "compiler" | "debugger";
+}
+
+export default class ReactNavbar extends React.Component<IReactNavbarProps, IReactNavbarState>{
+	public static defaultProps: IReactNavbarProps = {
+		brand: "down with the SICness",
+		font: "Comic Sans MS",
+		href: "#",
+	};
+
+	constructor(props: IReactNavbarProps) {
+		super(props);
 	}
->{
+
 	public render() {
 		return (
 			<Navbar

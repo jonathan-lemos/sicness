@@ -252,7 +252,7 @@ export class SicCsectTab {
 			const astr = ls.bcData === undefined ? "" : asHex(ls.bcData.aloc);
 			const rstr = ls.bcData === undefined ? "" : asHex(ls.bcData.rloc);
 			const inststr = ls.hasInstruction() ? ls.byteString() : "";
-			const istr = asHex(i);
+			const istr = i.toString(10);
 			++i;
 
 			let msg = istr.padEnd(5, " ") + "\t" +

@@ -8,7 +8,7 @@
 import { ISicInstruction } from "./ISicInstruction";
 import { SicLitTab } from "./SicLitTab";
 import { SicSplit } from "./SicSplit";
-import { sicCheckUnsigned } from "./SicUnsigned";
+import { sicCheckUnsigned, sicMakeUnsigned } from "./SicUnsigned";
 
 /**
  * Class that represents a WORD/BYTE.
@@ -23,13 +23,33 @@ export class SicSpace implements ISicInstruction {
 	}
 
 	/**
-	 * Splits a number into bytes.
-	 * @param n The number to split. It must fit in a 24-bit unsigned range.
+	 * Splits a word into bytes.
+	 * @param n The number to split. It must fit in a 24-bit range.
 	 * @returns The given number as a byte array.
 	 */
 	public static splitWord(n: number): number[] {
-		sicCheckUnsigned(n, 24);
+		if (n >= 0) {
+			sicCheckUnsigned(n, 24);
+		}
+		else {
+			n = sicMakeUnsigned(n, 24);
+		}
 		return [(n & 0xFF0000) >>> 16, (n & 0xFF00) >>> 8, (n & 0xFF)];
+	}
+
+	/**
+	 * Converts a byte into word form.
+	 * @param n The number to split. It must fit in an 8-bit range.
+	 * @returns The given number as a byte array.
+	 */
+	public static splitByte(n: number): number[] {
+		if (n >= 0) {
+			sicCheckUnsigned(n, 8);
+		}
+		else {
+			n = sicMakeUnsigned(n, 8);
+		}
+		return [0, 0, n];
 	}
 
 	/** WORD | BYTE */
@@ -47,9 +67,10 @@ export class SicSpace implements ISicInstruction {
 			throw new Error("This mnemonic is not a space.");
 		}
 		this.mnemonic = line.op;
+		const func = this.mnemonic === "BYTE" ? SicSpace.splitByte : SicSpace.splitWord;
 
 		// matches a decimal argument
-		const reDec = new RegExp("^(\\d+)$");
+		const reDec = new RegExp("^(-?\\d+)$");
 		// matches a hexadecimal argument
 		const reHex = new RegExp("^X'([0-9A-Fa-f]+)'$");
 		// matches a string
@@ -58,11 +79,11 @@ export class SicSpace implements ISicInstruction {
 		let match: RegExpMatchArray | null;
 		if ((match = line.args.match(reDec)) !== null) {
 			// convert the decimal to a byte array using splitWord
-			this.arg = SicSpace.splitWord(parseInt(match[1], 10));
+			this.arg = func(parseInt(match[1], 10));
 		}
 		else if ((match = line.args.match(reHex)) !== null) {
 			// convert the hex to a byte array using splitWord
-			this.arg = SicSpace.splitWord(parseInt(match[1], 16));
+			this.arg = func(parseInt(match[1], 16));
 		}
 		else if ((match = line.args.match(reChar)) !== null) {
 			this.arg = [];

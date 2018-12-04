@@ -5,11 +5,11 @@
  * of the MIT license.  See the LICENSE file for details.
 */
 
-import $ from "jquery";
+import "jquery";
 import React from "react";
 import AceEditor from "react-ace";
 import ReactDOM from "react-dom";
-import { SicCompiler } from "./SicCompiler/SicCompiler";
+import SicCompiler from "./SicCompiler/SicCompiler";
 
 const editor = ace.edit("editor");
 editor.setTheme("ace/theme/monokai");

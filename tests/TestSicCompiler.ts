@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { SicBase } from "../src/SicCompiler/SicBase";
-import { SicCompiler } from "../src/SicCompiler/SicCompiler";
+import SicCompiler from "../src/SicCompiler/SicCompiler";
 import { SicCsect } from "../src/SicCompiler/SicCsect";
 import { asByte, asHex, asWord, bytesToString } from "../src/SicCompiler/SicFmt";
 import { SicFormat1 } from "../src/SicCompiler/SicFormat1";
@@ -702,14 +702,14 @@ describe("SicFormat4 tests", () => {
 describe("SicSpace tests", () => {
 	it("handles WORD/BYTE correctly", () => {
 		const splitWORD = new SicSplit("\tWORD X'ABCD12'");
-		const splitBYTE = new SicSplit("\tBYTE 12");
+		const splitBYTE = new SicSplit("\tBYTE -12");
 		const w = new SicSpace(splitWORD);
 		const b = new SicSpace(splitBYTE);
 
 		expect(w.length()).to.equal(3);
 		expect(w.toBytes()).to.eql([0xAB, 0xCD, 0x12]);
 		expect(b.length()).to.equal(3);
-		expect(b.toBytes()).to.eql([0x00, 0x00, 12]);
+		expect(b.toBytes()).to.eql([0x00, 0x00, 0xF4]);
 	});
 
 	it("throws on invalid arguments", () => {
@@ -764,25 +764,25 @@ describe("SicCompiler tests", () => {
 		"7    \t     \t     \t        \tVAL EQU X'1BC'",
 		"8    \t     \t     \t        \t\tUSE FOO",
 		"9    \t10F  \t100  \t0F100120\t\t+STA =4",
-		"A    \t113  \t104  \t792010  \t\tSTB #ACTION",
-		"B    \t116  \t107  \t872FE7  \t\tSTT BACK",
-		"C    \t119  \t10A  \t12900126\t\t+STX @ACTION,X",
-		"D    \t11D  \t10E  \t7D01BC  \t\tSTS #VAL",
-		"E    \t     \t     \t        \t\tUSE",
-		"F    \t     \t     \t        \t\tLTORG",
-		"10   \t120  \t10F  \t000004  \tLTORG-WORD X'4'",
-		"11   \t123  \t112  \t0001BC  \tLTORG-WORD X'1BC'",
-		"12   \t126  \t115  \tAC30    \tACTION RMO B,A",
-		"13   \t128  \t117  \tC4      \t\tFIX",
-		"14   \t129  \t118  \t6F100120\t\t+LDS =4",
-		"15   \t12D  \t11C  \t000ABC  \tWORDN WORD X'ABC'",
-		"16   \t130  \t11F  \t        \tHUGE RESB X'1000'",
-		"17   \t1130 \t111F \t454F46  \tWORDB BYTE C'EOF'",
-		"18   \t     \t     \t        \t\tBASE VAL",
-		"19   \t1133 \t1122 \t034F6A  \t\tLDA ACTION",
-		"1A   \t     \t     \t        \t\tNOBASE",
-		"1B   \t1136 \t1125 \t030126  \t\tLDA ACTION",
-		"1C   \t1139 \t1128 \t        \t\tEND TEST",
+		"10   \t113  \t104  \t792010  \t\tSTB #ACTION",
+		"11   \t116  \t107  \t872FE7  \t\tSTT BACK",
+		"12   \t119  \t10A  \t12900126\t\t+STX @ACTION,X",
+		"13   \t11D  \t10E  \t7D01BC  \t\tSTS #VAL",
+		"14   \t     \t     \t        \t\tUSE",
+		"15   \t     \t     \t        \t\tLTORG",
+		"16   \t120  \t10F  \t000004  \tLTORG-WORD X'4'",
+		"17   \t123  \t112  \t0001BC  \tLTORG-WORD X'1BC'",
+		"18   \t126  \t115  \tAC30    \tACTION RMO B,A",
+		"19   \t128  \t117  \tC4      \t\tFIX",
+		"20   \t129  \t118  \t6F100120\t\t+LDS =4",
+		"21   \t12D  \t11C  \t000ABC  \tWORDN WORD X'ABC'",
+		"22   \t130  \t11F  \t        \tHUGE RESB X'1000'",
+		"23   \t1130 \t111F \t454F46  \tWORDB BYTE C'EOF'",
+		"24   \t     \t     \t        \t\tBASE VAL",
+		"25   \t1133 \t1122 \t034F6A  \t\tLDA ACTION",
+		"26   \t     \t     \t        \t\tNOBASE",
+		"27   \t1136 \t1125 \t030126  \t\tLDA ACTION",
+		"28   \t1139 \t1128 \t        \t\tEND TEST",
 	];
 	const objExpect = [
 		// TEST = name of prog, 000100 = start loc, 001039 = length of prog

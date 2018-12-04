@@ -72,7 +72,7 @@ export class SicOperandAddr {
 	 */
 	constructor(arg: string, type: SicOpType, csect: SicCsect) {
 		// Matches a decimal argument (@1234).
-		const reDecimal = new RegExp("^(=|#|@)?(\\d+)(,X)?$");
+		const reDecimal = new RegExp("^(=|#|@)?(-?\\d+)(,X)?$");
 		// Matches a hexadecimal argument (@X'1ABC')
 		const reHex = new RegExp("^(=|#|@)?X'([0-9A-F]+)'(,X)?$");
 		// Matches up to 3 characters in an argument (@'EOF')
@@ -124,6 +124,7 @@ export class SicOperandAddr {
 				this.val = x;
 				// Raw numeric arguments do not use pc-relative addressing.
 				this.pcrel = false;
+				this.base = undefined;
 			}
 		}
 		else if ((match = arg.match(reHex)) !== null) {
@@ -141,6 +142,7 @@ export class SicOperandAddr {
 				this.val = x;
 				// Raw numeric arguments do not use pc-relative addressing.
 				this.pcrel = false;
+				this.base = undefined;
 			}
 		}
 		else if ((match = arg.match(reChar)) !== null) {
@@ -178,7 +180,6 @@ export class SicOperandAddr {
 				csect.modRecs.push({loc: csect.useTab.aloc, len: 5, symbol: match[2]});
 				this.val = 0;
 				this.pcrel = false;
-				this.base = undefined;
 			}
 			else {
 				// Set this value to a new SicPending corresponding to the label.
