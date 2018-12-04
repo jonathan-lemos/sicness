@@ -52,8 +52,13 @@ export class SicFormat1 implements ISicInstruction {
 	 * Required for the ISicInstruction implementation.
 	 * This is a no-op because there are no arguments for a format 1 instruction.
 	 */
-	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
-		return;
+	public makeReady(
+		loc: number,
+		tagTab: { [key: string]: number },
+		litTab: SicLitTab,
+		extRefTab: Set<string>,
+		): string | null {
+		return null;
 	}
 
 	/**

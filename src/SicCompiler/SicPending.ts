@@ -46,9 +46,15 @@ export class SicPending {
 	 * This can be null if this SicPending does not represent a label.
 	 * @param litTab A SicLitTab mapping literals to lines of code.
 	 * This can be null if this SicPending does not represent a literal.
+	 * @param returns Number if this was converted successfully. String if this is an extref.
 	 */
-	public convert(tagTab: {[key: string]: number} | null, litTab: SicLitTab | null): number {
+	public convert(
+		tagTab: {[key: string]: number} | null,
+		litTab: SicLitTab | null,
+		extRefTab: Set<string> | null,
+		): number | string {
 		let s: number | null;
+
 		// If this is a literal.
 		if (typeof this.val === "number") {
 			if (litTab === null) {
@@ -58,16 +64,22 @@ export class SicPending {
 			if (s === null) {
 				throw new Error(this.val + "was not found in the literal table");
 			}
+			return s;
 		}
 		// Otherwise this is a label.
-		else {
-			if (tagTab === null) {
-				throw new Error("tagTab is undefined but this SicPending is a tag");
-			}
-			s = tagTab[this.val];
-			if (s === null) {
-				throw new Error(this.val + "was not found in the tag table");
-			}
+
+		// If this is an extref.
+		if (extRefTab !== null && extRefTab.has(this.val)) {
+			return this.val;
+		}
+
+		// Otherwise search the tag table.
+		if (tagTab === null) {
+			throw new Error("tagTab is undefined but this SicPending is a tag");
+		}
+		s = tagTab[this.val];
+		if (s === null) {
+			throw new Error(this.val + "was not found in the tag table");
 		}
 		return s;
 	}

@@ -110,8 +110,13 @@ export class SicSpace implements ISicInstruction {
 	 * Required for the ISicInstruction implementation
 	 * SicSpace instructions cannot use pending values so this function is a no-op.
 	 */
-	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
-		return;
+	public makeReady(
+		loc: number,
+		tagTab: { [key: string]: number },
+		litTab: SicLitTab,
+		extRefTab: Set<string>,
+		): string | null {
+		return null;
 	}
 
 	/**

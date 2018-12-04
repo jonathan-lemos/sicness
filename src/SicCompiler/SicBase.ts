@@ -60,6 +60,6 @@ export class SicBase {
 		const tagTab = p as {[key: string]: number};
 		const pending = this.val as SicPending;
 
-		this.val = pending.convert(tagTab, null);
+		this.val = pending.convert(tagTab, null, null);
 	}
 }

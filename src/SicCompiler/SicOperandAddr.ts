@@ -221,10 +221,16 @@ export class SicOperandAddr {
 	 * @param tagTab A hashtable mapping labels to their corresponding lines of code.
 	 * @param litTab A SicLitTab mapping literals to their corresponding lines of code.
 	 */
-	public makeReady(pc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+	public makeReady(
+		pc: number,
+		tagTab: { [key: string]: number },
+		litTab: SicLitTab,
+		extRefTab: Set<string>,
+		): string | null {
+
 		// Return if this is already ready.
 		if (this.rdy) {
-			return;
+			return null;
 		}
 
 		// If there is a base, make it ready.
@@ -235,7 +241,17 @@ export class SicOperandAddr {
 		// If this val is a SicPending
 		if (typeof this.val !== "number") {
 			// Convert it to a numeric value.
-			this.val = (this.val as SicPending).convert(tagTab, litTab);
+			const q = (this.val as SicPending).convert(tagTab, litTab, extRefTab);
+			// If this is an extref
+			if (typeof q === "string") {
+				this.val = 0;
+				if (this.type !== SicOpType.f4) {
+					throw new Error("EXTREF'd symbols can only be used with pass 2");
+				}
+				return q;
+			}
+			// Otherwise proceed normally.
+			this.val = q;
 		}
 
 		// get the correct operand length for the corresponding opcode
@@ -259,7 +275,7 @@ export class SicOperandAddr {
 			try {
 				this.val = sicMakeUnsigned(this.val - pc, opLen);
 				this.rdy = true;
-				return;
+				return null;
 			}
 			// if the value cannot fit in a 12-bit signed range
 			catch (e) {
@@ -272,7 +288,7 @@ export class SicOperandAddr {
 			try {
 				this.val = sicMakeUnsigned(this.val - (this.base.val as number), opLen);
 				this.rdy = true;
-				return;
+				return null;
 			}
 			// if the baserel displacement is too high
 			catch (e) {
@@ -284,6 +300,7 @@ export class SicOperandAddr {
 		// finally try direct addressing
 		sicCheckUnsigned(this.val, opLen);
 		this.rdy = true;
+		return null;
 	}
 
 	/**

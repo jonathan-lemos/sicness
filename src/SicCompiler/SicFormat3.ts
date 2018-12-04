@@ -46,9 +46,14 @@ export class SicFormat3 implements ISicInstruction {
 	 * If the operand is not ready, this function makes it ready.
 	 * @see SicOperandAddr.makeReady
 	 */
-	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+	public makeReady(
+		loc: number,
+		tagTab: { [key: string]: number },
+		litTab: SicLitTab,
+		extRefTab: Set<string>,
+		): string | null {
 		// loc + 3 === pc
-		this.op.makeReady(loc + 3, tagTab, litTab);
+		return this.op.makeReady(loc + this.length(), tagTab, litTab, extRefTab);
 	}
 
 	/**

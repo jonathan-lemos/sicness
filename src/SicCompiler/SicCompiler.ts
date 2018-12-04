@@ -130,7 +130,17 @@ export default class SicCompiler {
 			p.lst.forEach(l => {
 				// make all pending instructions ready
 				if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
-					l.bcData.inst.makeReady(l.bcData.aloc, p.tagTab, p.litTab);
+					try {
+						const res = l.bcData.inst.makeReady(l.bcData.aloc, p.tagTab, p.litTab, p.extRefTab);
+						if (res !== null) {
+							p.modRecs.push({loc: l.bcData.aloc, len: 5, symbol: res});
+						}
+					}
+					catch (e) {
+						const str = (e as Error).message;
+						l.bcData = undefined;
+						l.errmsg = str;
+					}
 				}
 			});
 		});

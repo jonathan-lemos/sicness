@@ -92,8 +92,13 @@ export class SicFormat2 implements ISicInstruction {
 	 * Required for the ISicInstruction implemtnation.
 	 * Format 2 instructions cannot use labels or literals, so this is a no-op.
 	 */
-	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
-		return;
+	public makeReady(
+		loc: number,
+		tagTab: { [key: string]: number },
+		litTab: SicLitTab,
+		extRefTab: Set<string>,
+		): string | null {
+		return null;
 	}
 
 	/**

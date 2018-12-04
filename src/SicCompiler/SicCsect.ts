@@ -209,12 +209,7 @@ export class SicCsectTab {
 			EXTDEF: (source: string, split: SicSplit): void => {
 				const s = split.args.split(",");
 				this.addLst(new SicLstEntry(source));
-				s.forEach(r => {
-					if (this.current.tagTab[r] === undefined) {
-						throw new Error(r + " does not exist in the symbol table. Did you try to forward reference it?");
-					}
-					this.current.extDefTab.add(r);
-				});
+				s.forEach(r => this.current.extDefTab.add(r));
 			},
 
 			EXTREF: (source: string, split: SicSplit): void => {

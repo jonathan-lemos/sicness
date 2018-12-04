@@ -121,14 +121,14 @@ describe("SicPending tests", () => {
 		const sp = new SicPending("VAL");
 		expect(sp.isTag()).to.equal(true);
 		expect(sp.isLiteral()).to.equal(false);
-		expect(sp.convert(tagTab, litTab)).to.equal(0x123);
+		expect(sp.convert(tagTab, litTab, null)).to.equal(0x123);
 	});
 
 	it("handles literals correctly", () => {
 		const sp = new SicPending(0x123);
 		expect(sp.isTag()).to.equal(false);
 		expect(sp.isLiteral()).to.equal(true);
-		expect(sp.convert(tagTab, litTab)).to.equal(0x456);
+		expect(sp.convert(tagTab, litTab, null)).to.equal(0x456);
 	});
 });
 
@@ -331,7 +331,7 @@ describe("SicFormat3 tests", () => {
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x50, csect.tagTab, csect.litTab);
+		f3.makeReady(0x50, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) - (loc(0x50) + len(0x03)) = 0x0D0
@@ -347,7 +347,7 @@ describe("SicFormat3 tests", () => {
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x200, csect.tagTab, csect.litTab);
+		f3.makeReady(0x200, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF23
@@ -363,7 +363,7 @@ describe("SicFormat3 tests", () => {
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x200, csect.tagTab, csect.litTab);
+		f3.makeReady(0x200, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x06 - LDX(0x04) + Ni(0x02)
 		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF20
@@ -379,7 +379,7 @@ describe("SicFormat3 tests", () => {
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x200, csect.tagTab, csect.litTab);
+		f3.makeReady(0x200, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x06 - LDX(0x04) + nI(0x01)
 		//     disp = address(0x123) - (loc(0x200) + len(0x03)) = 0xF20
@@ -410,11 +410,11 @@ describe("SicFormat3 tests", () => {
 		expect(ft3.length()).to.equal(3);
 		expect(ft3.ready()).to.equal(false);
 
-		ft1.makeReady(0x100, csect.tagTab, csect.litTab);
+		ft1.makeReady(0x100, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft1.ready()).to.equal(true);
-		ft2.makeReady(0x103, csect.tagTab, csect.litTab);
+		ft2.makeReady(0x103, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft2.ready()).to.equal(true);
-		ft3.makeReady(0x106, csect.tagTab, csect.litTab);
+		ft3.makeReady(0x106, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft3.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
@@ -447,7 +447,7 @@ describe("SicFormat3 tests", () => {
 
 		expect(f3Far.length()).to.equal(3);
 		expect(f3Far.ready()).to.equal(false);
-		f3Far.makeReady(0x100, csect.tagTab, csect.litTab);
+		f3Far.makeReady(0x100, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f3Far.ready()).to.equal(true);
 
 		expect(f3Near.length()).to.equal(3);
@@ -475,7 +475,7 @@ describe("SicFormat3 tests", () => {
 		expect(f3.length()).to.equal(3);
 		expect(f3.ready()).to.equal(false);
 
-		f3.makeReady(0x50, csect.tagTab, csect.litTab);
+		f3.makeReady(0x50, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f3.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) - (loc(0x50) + len(0x03)) = 0x0D0
@@ -524,11 +524,12 @@ describe("SicFormatLegacy tests", () => {
 		expect(ft3.length()).to.equal(3);
 		expect(ft3.ready()).to.equal(false);
 
-		ft1.makeReady(0x100, csect.tagTab, csect.litTab);
+		ft1.makeReady(0x100, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft1.ready()).to.equal(true);
-		ft2.makeReady(0x103, csect.tagTab, csect.litTab);
+		ft2.makeReady(0x103, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft2.ready()).to.equal(true);
-		ft3.makeReady(0x106, csect.tagTab, csect.litTab);
+		ft3.makeReady(0x106, csect.tagTab, csect.litTab, csect.extRefTab);
+
 		expect(ft3.ready()).to.equal(true);
 
 		// 0x04 - LDX(0x04)
@@ -557,7 +558,7 @@ describe("SicFormatLegacy tests", () => {
 		expect(fL.length()).to.equal(3);
 		expect(fL.ready()).to.equal(false);
 
-		fL.makeReady(0x50, csect.tagTab, csect.litTab);
+		fL.makeReady(0x50, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(fL.ready()).to.equal(true);
 		// 0x04 - LDX(0x04)
 		//     disp = address(0x123)
@@ -592,7 +593,7 @@ describe("SicFormat4 tests", () => {
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
-		f4.makeReady(0x200, csect.tagTab, csect.litTab);
+		f4.makeReady(0x200, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x05 - LDX(0x04) + Ni(0x02)
 		//     disp = address(0x123) = 0x00123
@@ -608,7 +609,7 @@ describe("SicFormat4 tests", () => {
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
-		f4.makeReady(0x200, csect.tagTab, csect.litTab);
+		f4.makeReady(0x200, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x05 - LDX(0x04) + nI(0x01)
 		//     disp = address(0x123)
@@ -639,11 +640,11 @@ describe("SicFormat4 tests", () => {
 		expect(ft3.length()).to.equal(4);
 		expect(ft3.ready()).to.equal(false);
 
-		ft1.makeReady(0x100, csect.tagTab, csect.litTab);
+		ft1.makeReady(0x100, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft1.ready()).to.equal(true);
-		ft2.makeReady(0x104, csect.tagTab, csect.litTab);
+		ft2.makeReady(0x104, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft2.ready()).to.equal(true);
-		ft3.makeReady(0x108, csect.tagTab, csect.litTab);
+		ft3.makeReady(0x108, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(ft3.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
@@ -675,7 +676,7 @@ describe("SicFormat4 tests", () => {
 		expect(f4.length()).to.equal(4);
 		expect(f4.ready()).to.equal(false);
 
-		f4.makeReady(0x50, csect.tagTab, csect.litTab);
+		f4.makeReady(0x50, csect.tagTab, csect.litTab, csect.extRefTab);
 		expect(f4.ready()).to.equal(true);
 		// 0x07 - LDX(0x04) + NI(0x03)
 		//     disp = address(0x123) = 0x00123

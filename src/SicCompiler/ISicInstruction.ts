@@ -28,6 +28,7 @@ export interface ISicInstruction {
 	 * @param loc The current locctr. Note that this is not the current program counter.
 	 * @param tagTab A hashtable mapping labels to their lines of code.
 	 * @param litTab A SicLitTab mapping literals to their lines of code.
+	 * @returns The label of the modification record that needs to be generated, or null if it doesn't.
 	 */
-	makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void;
+	makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab, extRefTab: Set<string>): string | null;
 }

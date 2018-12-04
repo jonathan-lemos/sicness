@@ -49,9 +49,14 @@ export class SicFormatLegacy implements ISicInstruction {
 	/**
 	 * Makes the operand ready if it is not already.
 	 */
-	public makeReady(loc: number, tagTab: { [key: string]: number }, litTab: SicLitTab): void {
+	public makeReady(
+		loc: number,
+		tagTab: { [key: string]: number },
+		litTab: SicLitTab,
+		extRefTab: Set<string>,
+		): string | null {
 		// loc + this.length() === pc
-		this.op.makeReady(loc + this.length(), tagTab, litTab);
+		return this.op.makeReady(loc + this.length(), tagTab, litTab, extRefTab);
 	}
 
 	/**
