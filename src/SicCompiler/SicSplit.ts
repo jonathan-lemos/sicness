@@ -45,8 +45,8 @@ export class SicSplit {
 			this.args = "";
 		}
 
-		if (this.tag.match(/^[A-Z]*$/) === null) {
-			throw new Error(`Labels can only contain A-Z (found "${this.tag}")`);
+		if (this.tag !== "" && this.tag.match(/^[A-Z][A-Z0-9]*$/) === null) {
+			throw new Error(`Labels must start with A-Z (found "${this.tag}")`);
 		}
 	}
 }
