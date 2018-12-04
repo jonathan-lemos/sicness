@@ -282,15 +282,15 @@ export class SicCsectTab {
 			if (name === undefined) {
 				name = "";
 			}
-			return "H" + name + " " + asWord(loc) + asWord(len);
+			return `H ${name} ${asWord(loc)} ${asWord(len)}`;
 		};
 
 		const mkD = (defs: Set<string>, tagTab: { [key: string]: number }): string => {
 			if (defs.size === 0) {
 				return "";
 			}
-			let a = "D";
-			defs.forEach(v => a += v + asWord(tagTab[v]), "");
+			let a = "D ";
+			defs.forEach(v => a += `${v} ${asWord(tagTab[v])}`, "");
 			return a;
 		};
 
@@ -298,7 +298,7 @@ export class SicCsectTab {
 			if (refs.size === 0) {
 				return "";
 			}
-			let a = "R";
+			let a = "R ";
 			refs.forEach(v => a += v + " ", "");
 			return a.trim();
 		};
@@ -309,7 +309,7 @@ export class SicCsectTab {
 				if (l.bcData === undefined || l.bcData.inst === undefined) {
 					return;
 				}
-				buf.push("T" + asWord(l.bcData.aloc) + asByte(l.bcData.inst.length()) + bytesToString(l.bcData.inst.toBytes()));
+				buf.push(`T ${asWord(l.bcData.aloc)} ${asByte(l.bcData.inst.length())} ${bytesToString(l.bcData.inst.toBytes())}`);
 			});
 			return buf;
 		};
@@ -318,12 +318,12 @@ export class SicCsectTab {
 			if (loc === undefined) {
 				return "E";
 			}
-			return "E" + asWord(loc);
+			return `E ${asWord(loc)}`;
 		};
 
 		const mkM = (modrec: Array<{loc: number, len: number, symbol: string}>): string[] => {
 			return modrec.map(m => {
-				return "M" + asWord(m.loc) + asByte(m.len) + "+" + m.symbol;
+				return `M ${asWord(m.loc)} ${asByte(m.len)} +${m.symbol}`;
 			});
 		};
 

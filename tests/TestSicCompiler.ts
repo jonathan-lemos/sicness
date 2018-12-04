@@ -321,6 +321,7 @@ describe("SicFormat3 tests", () => {
 	const csect = new SicCsect(0);
 	csect.tagTab = {
 		VAL: 0x123,
+		YUGE: 0x9FF,
 	};
 
 	it("handles pcrel forward correctly", () => {
@@ -438,7 +439,7 @@ describe("SicFormat3 tests", () => {
 	csect.litTab = new SicLitTab();
 
 	it("handles baserel arguments correctly", () => {
-		const splitFar = new SicSplit("\tLDX X'9FF'");
+		const splitFar = new SicSplit("\tLDX YUGE");
 		const splitNear = new SicSplit("\tLDX X'200'");
 		csect.base = new SicBase(0x300);
 		const f3Far = new SicFormat3(splitFar, csect);
@@ -450,8 +451,6 @@ describe("SicFormat3 tests", () => {
 		expect(f3Far.ready()).to.equal(true);
 
 		expect(f3Near.length()).to.equal(3);
-		expect(f3Near.ready()).to.equal(false);
-		f3Near.makeReady(0x100, csect.tagTab, csect.litTab);
 		expect(f3Near.ready()).to.equal(true);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
@@ -461,10 +460,10 @@ describe("SicFormat3 tests", () => {
 		expect(f3Far.toBytes()).to.eql([0x07, 0x46, 0xFF]);
 
 		// 0x07 - LDX(0x04) + NI(0x03)
-		//     disp = address(0x200) - base(0x300) = 0xF00
-		// 0x49 - xbPe(0x40) + disp top 4(0x0F)
+		//     disp = address(0x200) = 0x200
+		// 0x49 - xbpe(0x00) + disp top 4(0x02)
 		// 0xEF - disp bot 8(0x00)
-		expect(f3Near.toBytes()).to.eql([0x07, 0x4F, 0x00]);
+		expect(f3Near.toBytes()).to.eql([0x07, 0x02, 0x00]);
 	});
 
 	csect.base = undefined;
@@ -786,28 +785,28 @@ describe("SicCompiler tests", () => {
 	];
 	const objExpect = [
 		// TEST = name of prog, 000100 = start loc, 001039 = length of prog
-		"HTEST 000100001039",
+		"H TEST 000100 001039",
 		// 000100 = loc, 03 = len, 020004 = obj code
-		"T00010003020004",
-		"T000103036B201A",
-		"T00010603750004",
-		"T00010903070004",
-		"T00010C036FA014",
-		"T00010F040F100120",
-		"T00011303792010",
-		"T00011603872FE7",
-		"T0001190412900126",
-		"T00011D037D01BC",
-		"T00012003000004",
-		"T000123030001BC",
-		"T00012602AC30",
-		"T00012801C4",
-		"T000129046F100120",
-		"T00012D03000ABC",
-		"T00113003454F46",
-		"T00113303034F6A",
-		"T00113603030126",
-		"E000100",
+		"T 000100 03 020004",
+		"T 000103 03 6B201A",
+		"T 000106 03 750004",
+		"T 000109 03 070004",
+		"T 00010C 03 6FA014",
+		"T 00010F 04 0F100120",
+		"T 000113 03 792010",
+		"T 000116 03 872FE7",
+		"T 000119 04 12900126",
+		"T 00011D 03 7D01BC",
+		"T 000120 03 000004",
+		"T 000123 03 0001BC",
+		"T 000126 02 AC30",
+		"T 000128 01 C4",
+		"T 000129 04 6F100120",
+		"T 00012D 03 000ABC",
+		"T 001130 03 454F46",
+		"T 001133 03 034F6A",
+		"T 001136 03 030126",
+		"E 000100",
 	];
 
 	it("creates a correct lst for a sample program", () => {
@@ -843,14 +842,14 @@ describe("SicCompiler tests", () => {
 		"8    \t12F  \t12F  \t        \t\tEND TEST",
 	];
 	const csectObj = [
-		"HTEST 00012300000C",
-		"DYEET000126",
-		"T00012303010004",
-		"E000123",
-		"HNSEC 000000000004",
-		"RYEET",
-		"T0000000403100000",
-		"M00000005+YEET",
+		"H TEST 000123 00000C",
+		"D YEET 000126",
+		"T 000123 03 010004",
+		"E 000123",
+		"H NSEC 000000 000004",
+		"R YEET",
+		"T 000000 04 03100000",
+		"M 000000 05 +YEET",
 		"E",
 	];
 

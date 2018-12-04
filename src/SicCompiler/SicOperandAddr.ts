@@ -170,6 +170,7 @@ export class SicOperandAddr {
 				this.val = x;
 				// Raw numeric arguments do not use pc-relative addressing.
 				this.pcrel = false;
+				this.base = undefined;
 			}
 		}
 		else if ((match = arg.match(reTag)) != null) {
