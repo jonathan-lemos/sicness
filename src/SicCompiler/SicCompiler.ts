@@ -19,7 +19,7 @@ import { SicSplit } from "./SicSplit";
 /**
  * Class that compiles raw source code into LST and OBJ formats.
  */
-export class SicCompiler {
+export default class SicCompiler {
 	/**
 	 * If a START directive is given, its data will show up here.
 	 * @property name The label given to start.
