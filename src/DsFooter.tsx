@@ -17,7 +17,7 @@ export interface IDsFooterState {
 	active: "compiler" | "debugger";
 }
 
-export default class ReactFooter extends React.Component<IDsFooterProps, IDsFooterState>{
+export class DsFooter extends React.Component<IDsFooterProps, IDsFooterState>{
 	public static defaultProps: IDsFooterProps = {
 		brand: "down with the SICness",
 		font: "Comic Sans MS",

@@ -7,7 +7,8 @@
 
 import React from "react";
 import { Navbar, NavbarBrand } from "reactstrap";
-import { IDsAppState } from "./IDsAppState";
+import { DsNavbarButton } from "./DsNavbarButton";
+import { DsNavbarLink } from "./DsNavbarLink";
 
 export interface IDsNavbarProps {
 	brand: string;
@@ -15,7 +16,11 @@ export interface IDsNavbarProps {
 	href: string;
 }
 
-export default class ReactNavbar extends React.Component<IDsNavbarProps, IDsAppState>{
+export interface IDsNavbarState {
+	active: "compiler" | "debugger";
+}
+
+export default class ReactNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 	public static defaultProps: IDsNavbarProps = {
 		brand: "down with the SICness",
 		font: "Comic Sans MS",
@@ -26,17 +31,34 @@ export default class ReactNavbar extends React.Component<IDsNavbarProps, IDsAppS
 		super(props);
 	}
 
+	public switchState() {
+		/* empty */
+	}
+
 	public render() {
-		const links = React.Children.map(this.props.children, m => {
-			
-		});
 		return (
-			<Navbar className="navbar-expand-lg navbar-dark bg-dark">
+			<Navbar className="navbar navbar-expand-md navbar-dark bg-dark">
 				<NavbarBrand href="#" style={`font-face: ${this.props.font}`}>
 					{this.props.brand}
 				</NavbarBrand>
-				<div className="collapse navbar-collapse">
-					{this.props.children}
+				<button
+					className="navbar-toggler"
+					type="button"
+					data-toggle="collapse"
+					data-target="#navbarCollapse"
+					aria-controls="navbarCollapse"
+					aria-expanded="false"
+					aria-label="Toggle navigation">
+		  			<span className="navbar-toggler-icon"></span>
+				</button>
+				<div id="navbarCollapse" className="collapse navbar-collapse">
+					<ul className="navbar-nav mr-auto">
+						<DsNavbarLink
+							buttonState="active"
+							onClick={() => {/**/}}
+							/>
+					</ul>
+
 				</div>
 			</Navbar>
 		);

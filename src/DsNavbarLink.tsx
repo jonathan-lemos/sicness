@@ -13,7 +13,7 @@ export interface IDsNavbarLinkProps {
 	text: string;
 }
 
-export default class DsNavbarLink extends React.Component<IDsNavbarLinkProps> {
+export class DsNavbarLink extends React.Component<IDsNavbarLinkProps> {
 	public static defaultProps: IDsNavbarLinkProps = {
 		buttonState: "inactive",
 		onClick: () => {/* empty */},

@@ -13,7 +13,7 @@ export interface IDsNavbarButtonProps {
 	theme: "default" | "dark" | "danger" | "warning" | "success";
 }
 
-export default class DsNavbarButton extends React.Component<IDsNavbarButtonProps> {
+export class DsNavbarButton extends React.Component<IDsNavbarButtonProps> {
 	public static defaultProps: IDsNavbarButtonProps = {
 		onClick: () => {/* empty */},
 		text: "",
