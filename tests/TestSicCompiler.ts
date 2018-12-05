@@ -762,13 +762,13 @@ describe("SicCompiler tests", () => {
 		"5    \t109  \t109  \t070004  \t\tLDX 4",
 		"6    \t10C  \t10C  \t6FA014  \t\tLDS =X'1BC',X",
 		"7    \t     \t     \t        \tVAL EQU X'1BC'",
-		"8    \t     \t     \t        \t\tUSE FOO",
+		"8    \t10F  \t1128 \t        \t\tUSE FOO",
 		"9    \t10F  \t1128 \t0F100120\t\t+STA =4",
 		"10   \t113  \t112C \t792010  \t\tSTB #ACTION",
 		"11   \t116  \t112F \t872FE7  \t\tSTT BACK",
 		"12   \t119  \t1132 \t12900126\t\t+STX @ACTION,X",
 		"13   \t11D  \t1136 \t7D01BC  \t\tSTS #VAL",
-		"14   \t     \t     \t        \t\tUSE",
+		"14   \t120  \t10F  \t        \t\tUSE",
 		"15   \t     \t     \t        \t\tLTORG",
 		"16   \t120  \t10F  \t000004  \tX'4' BYTE X'4'",
 		"17   \t123  \t112  \t0001BC  \tX'1BC' BYTE X'1BC'",
@@ -782,7 +782,7 @@ describe("SicCompiler tests", () => {
 		"25   \t1133 \t1122 \t034F6A  \t\tLDA ACTION",
 		"26   \t     \t     \t        \t\tNOBASE",
 		"27   \t1136 \t1125 \t030126  \t\tLDA ACTION",
-		"28   \t1139 \t1128 \t        \t\tEND TEST",
+		"28   \t1139 \t1139 \t        \t\tEND TEST",
 	];
 	const objExpect = [
 		// TEST = name of prog, 000100 = start loc, 001039 = length of prog

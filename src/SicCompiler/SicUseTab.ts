@@ -35,6 +35,10 @@ export class SicUseTab {
 	 * The absolute line of code of the program.
 	 */
 	private ALOC: number;
+	/**
+	 * Filled in once this SicUseTab is corrected.
+	 */
+	private finalPair: SicLocPair | undefined;
 
 	/**
 	 * Constructs a new SicUseTab at the given starting locctr.
@@ -65,6 +69,9 @@ export class SicUseTab {
 	 * Returns a SicLocPair corresponding to the current locctr.
 	 */
 	public loc(): SicLocPair {
+		if (this.finalPair !== undefined) {
+			return this.finalPair;
+		}
 		const l = new SicLocPair(this.ALOC, this.current.rloc);
 		this.current.locsent.push(l);
 		return l;
@@ -93,11 +100,16 @@ export class SicUseTab {
 	}
 
 	public correct(): void {
+		if (this.finalPair !== undefined) {
+			return;
+		}
+
 		let prev = this.current.rloc;
 		for (let i = 1; i < this.useTab.length; ++i) {
 			this.useTab[i].locsent.forEach(l => l.r += prev);
 			prev += this.useTab[i].rloc;
 		}
+		this.finalPair = new SicLocPair(this.aloc, prev);
 	}
 
 	private find(label: string): number | null {

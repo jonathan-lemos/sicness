@@ -12,7 +12,7 @@ import { SicLitTab } from "./SicLitTab";
 import { SicLstEntry } from "./SicLstEntry";
 import { SicPending } from "./SicPending";
 import { SicSplit } from "./SicSplit";
-import { SicUseTab } from "./SicUseTab";
+import { SicLocPair, SicUseTab } from "./SicUseTab";
 
 /**
  * A class holding the context for a csect.
@@ -148,7 +148,26 @@ export class SicCsectTab {
 
 			// TODO fix bug where this doesn't have to be the final line of code.
 			END: (source: string, split: SicSplit): void => {
-				this.csect("");
+				// find the correct CSECT
+				let cs: string;
+				if (split.args === "") {
+					throw new Error("END must have a label");
+				}
+				if (this.startData !== undefined && this.startData.name === split.args) {
+					cs = "";
+				}
+				else if (this.csects[name] === undefined) {
+					throw new Error(`${split.args} does not correspond to any given CSECT/START label.`);
+				}
+				else {
+					cs = split.args;
+				}
+
+				this.csect(cs);
+				if (this.current.litTab.hasPending()) {
+					this.directives["SILENT_LTORG"]("", new SicSplit("\tSILENT_LTORG"));
+				}
+				this.current.useTab.correct();
 				if ((this.startData === undefined && split.args !== "") ||
 					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
@@ -207,7 +226,8 @@ export class SicCsectTab {
 
 			USE: (source: string, split: SicSplit): void => {
 				this.current.useTab.use(split.args);
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry(source,
+					{ loc: this.current.useTab.loc(), inst: undefined }));
 			},
 
 			CSECT: (source: string, split: SicSplit): void => {
