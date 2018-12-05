@@ -120,7 +120,7 @@ export class SicCsectTab {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESW can be jumped to.
 				this.addLst(new SicLstEntry(source,
-					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
+					{ loc: this.current.useTab.loc() , inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
 				this.current.useTab.inc(3 * parseNum(split.args));
 			},
@@ -129,7 +129,7 @@ export class SicCsectTab {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESB can be jumped to.
 				this.addLst(new SicLstEntry(source,
-					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
+					{ loc: this.current.useTab.loc(), inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
 				this.current.useTab.inc(parseNum(split.args));
 			},
@@ -142,7 +142,7 @@ export class SicCsectTab {
 				// START arguments are always hexadecimal
 				this.current.setStartAddr(parseInt(split.args, 16));
 				this.addLst(new SicLstEntry(source,
-					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
+					{ loc: this.current.useTab.loc(), inst: undefined }));
 				this.startData = { name: split.tag, loc: this.current.useTab.aloc };
 			},
 
@@ -154,7 +154,7 @@ export class SicCsectTab {
 					throw new Error("END label must be the same as the start label.");
 				}
 				this.addLst(new SicLstEntry(source,
-					{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: undefined }));
+					{ loc: this.current.useTab.loc(), inst: undefined }));
 			},
 
 			BASE: (source: string, split: SicSplit): void => {
@@ -173,12 +173,21 @@ export class SicCsectTab {
 				this.addLst(new SicLstEntry(source));
 			},
 
+			SILENT_LTORG: (source: string, split: SicSplit): void => {
+				const l = this.current.litTab.createOrg(this.current.useTab.aloc);
+				l.forEach(v => {
+					this.addLst(new SicLstEntry(`X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
+						{ loc: this.current.useTab.loc(), inst: new SicLiteral(v.val) }));
+					this.current.useTab.inc(3);
+				});
+			},
+
 			LTORG: (source: string, split: SicSplit): void => {
 				this.addLst(new SicLstEntry(source));
 				const l = this.current.litTab.createOrg(this.current.useTab.aloc);
 				l.forEach(v => {
-					this.addLst(new SicLstEntry("LTORG-WORD X'" + asHex(v.val) + "'",
-						{ aloc: this.current.useTab.aloc, rloc: this.current.useTab.rloc, inst: new SicLiteral(v.val) }));
+					this.addLst(new SicLstEntry(`X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
+						{ loc: this.current.useTab.loc(), inst: new SicLiteral(v.val) }));
 					this.current.useTab.inc(3);
 				});
 			},
@@ -228,7 +237,20 @@ export class SicCsectTab {
 		};
 	}
 
+	public litPool(): void {
+		const l = this.current.litTab.createOrg(this.current.useTab.aloc);
+		l.forEach(v => {
+			this.addLst(new SicLstEntry(`X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
+				{ loc: this.current.useTab.loc(), inst: new SicLiteral(v.val) }));
+			this.current.useTab.inc(3);
+		});
+
+	}
+
 	public isDirective(mnemonic: string): boolean {
+		if (mnemonic === "SILENT_LTORG") {
+			return false;
+		}
 		return this.directives[mnemonic] !== undefined;
 	}
 
@@ -244,8 +266,8 @@ export class SicCsectTab {
 		let i = 1;
 
 		return s.concat(this.lst.map(ls => {
-			const astr = ls.bcData === undefined ? "" : asHex(ls.bcData.aloc);
-			const rstr = ls.bcData === undefined ? "" : asHex(ls.bcData.rloc);
+			const astr = ls.bcData === undefined ? "" : asHex(ls.bcData.loc.a);
+			const rstr = ls.bcData === undefined ? "" : asHex(ls.bcData.loc.r);
 			const inststr = ls.hasInstruction() ? ls.byteString() : "";
 			const istr = i.toString(10);
 			++i;
@@ -304,7 +326,7 @@ export class SicCsectTab {
 				if (l.bcData === undefined || l.bcData.inst === undefined) {
 					return;
 				}
-				buf.push(`T ${asWord(l.bcData.aloc)} ${asByte(l.bcData.inst.length())} ${bytesToString(l.bcData.inst.toBytes())}`);
+				buf.push(`T ${asWord(l.bcData.loc.a)} ${asByte(l.bcData.inst.length())} ${bytesToString(l.bcData.inst.toBytes())}`);
 			});
 			return buf;
 		};
@@ -316,7 +338,7 @@ export class SicCsectTab {
 			return `E ${asWord(loc)}`;
 		};
 
-		const mkM = (modrec: Array<{loc: number, len: number, symbol: string}>): string[] => {
+		const mkM = (modrec: Array<{ loc: number, len: number, symbol: string }>): string[] => {
 			return modrec.map(m => {
 				return `M ${asWord(m.loc)} ${asByte(m.len)} +${m.symbol}`;
 			});
@@ -328,14 +350,14 @@ export class SicCsectTab {
 
 			for (const b of a) {
 				if (b.bcData !== undefined) {
-					start = b.bcData.aloc;
+					start = b.bcData.loc.a;
 					break;
 				}
 			}
 			for (let i = a.length - 1; i >= 0; --i) {
 				const bc = a[i].bcData;
 				if (bc !== undefined) {
-					end = bc.aloc + (bc.inst !== undefined ? bc.inst.length() : 0);
+					end = bc.loc.a + (bc.inst !== undefined ? bc.inst.length() : 0);
 					break;
 				}
 			}

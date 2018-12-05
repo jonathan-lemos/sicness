@@ -19,7 +19,7 @@ import { SicSplit } from "./SicSplit";
 /**
  * Class that compiles raw source code into LST and OBJ formats.
  */
-export default class SicCompiler {
+export class SicCompiler {
 	/**
 	 * A hashtable containing csects (compiler contexts)
 	 * The default is "".
@@ -106,7 +106,7 @@ export default class SicCompiler {
 
 				// add the instruction to the lst
 				this.ctab.addLst(new SicLstEntry(val,
-					{ aloc: this.ctab.current.useTab.aloc, rloc: this.ctab.current.useTab.rloc, inst: instr }));
+					{ loc: this.ctab.current.useTab.loc(), inst: instr }));
 				// increment usetab accordingly
 				this.ctab.current.useTab.inc(instr.length());
 			}
@@ -121,8 +121,9 @@ export default class SicCompiler {
 		// add final ltorg if literals are not in one
 		this.ctab.forEach(p => {
 			if (p.litTab.hasPending()) {
-				this.ctab.directives["LTORG"]("AUTO-LTORG", new SicSplit("\tAUTO-LTORG"));
+				this.ctab.directives["SILENT_LTORG"]("", new SicSplit("\tSILENT_LTORG"));
 			}
+			p.useTab.correct();
 		});
 
 		// pass 2
@@ -131,9 +132,9 @@ export default class SicCompiler {
 				// make all pending instructions ready
 				if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
 					try {
-						const res = l.bcData.inst.makeReady(l.bcData.aloc, p.tagTab, p.litTab, p.extRefTab);
+						const res = l.bcData.inst.makeReady(l.bcData.loc.a, p.tagTab, p.litTab, p.extRefTab);
 						if (res !== null) {
-							p.modRecs.push({loc: l.bcData.aloc, len: 5, symbol: res});
+							p.modRecs.push({loc: l.bcData.loc.a, len: 5, symbol: res});
 						}
 					}
 					catch (e) {

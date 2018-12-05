@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { SicBase } from "../src/SicCompiler/SicBase";
-import SicCompiler from "../src/SicCompiler/SicCompiler";
+import { SicCompiler } from "../src/SicCompiler/SicCompiler";
 import { SicCsect } from "../src/SicCompiler/SicCsect";
 import { asByte, asHex, asWord, bytesToString } from "../src/SicCompiler/SicFmt";
 import { SicFormat1 } from "../src/SicCompiler/SicFormat1";
@@ -763,15 +763,15 @@ describe("SicCompiler tests", () => {
 		"6    \t10C  \t10C  \t6FA014  \t\tLDS =X'1BC',X",
 		"7    \t     \t     \t        \tVAL EQU X'1BC'",
 		"8    \t     \t     \t        \t\tUSE FOO",
-		"9    \t10F  \t100  \t0F100120\t\t+STA =4",
-		"10   \t113  \t104  \t792010  \t\tSTB #ACTION",
-		"11   \t116  \t107  \t872FE7  \t\tSTT BACK",
-		"12   \t119  \t10A  \t12900126\t\t+STX @ACTION,X",
-		"13   \t11D  \t10E  \t7D01BC  \t\tSTS #VAL",
+		"9    \t10F  \t1128 \t0F100120\t\t+STA =4",
+		"10   \t113  \t112C \t792010  \t\tSTB #ACTION",
+		"11   \t116  \t112F \t872FE7  \t\tSTT BACK",
+		"12   \t119  \t1132 \t12900126\t\t+STX @ACTION,X",
+		"13   \t11D  \t1136 \t7D01BC  \t\tSTS #VAL",
 		"14   \t     \t     \t        \t\tUSE",
 		"15   \t     \t     \t        \t\tLTORG",
-		"16   \t120  \t10F  \t000004  \tLTORG-WORD X'4'",
-		"17   \t123  \t112  \t0001BC  \tLTORG-WORD X'1BC'",
+		"16   \t120  \t10F  \t000004  \tX'4' BYTE X'4'",
+		"17   \t123  \t112  \t0001BC  \tX'1BC' BYTE X'1BC'",
 		"18   \t126  \t115  \tAC30    \tACTION RMO B,A",
 		"19   \t128  \t117  \tC4      \t\tFIX",
 		"20   \t129  \t118  \t6F100120\t\t+LDS =4",

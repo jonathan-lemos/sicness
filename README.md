@@ -13,7 +13,7 @@ A work-in-progress online SIC/XE assembler/debugger written in Typescript (ES6)/
 	* USE
 	* BASE/NOBASE
 * The following compiler directives are partially supported:
-    * LTORG (does not place a new literal when out of pcrel/baserel range, fix AUTO-LTORG/LTORG-WORD)
+    * LTORG (does not place a new literal when out of pcrel/baserel range)
 	* EQU (does not interact with asterisk properly)
 	* \* (does not interact with EQU properly)
 

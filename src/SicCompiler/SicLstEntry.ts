@@ -7,6 +7,7 @@
 
 import { ISicInstruction } from "./ISicInstruction";
 import { bytesToString } from "./SicFmt";
+import { SicLocPair } from "./SicUseTab";
 
 /**
  * Class that represents a processed line of code.
@@ -21,7 +22,7 @@ export class SicLstEntry {
 	 * @property rloc The relative (USE tab) line of code of this lst.
 	 * @property inst The generated instruction. This can be undefined if this lst does not have an instruction.
 	 */
-	public bcData: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | undefined;
+	public bcData: { loc: SicLocPair, inst: ISicInstruction | undefined } | undefined;
 	/** The error message if there is one, or undefined if not. */
 	public errmsg: string | undefined;
 
@@ -34,7 +35,7 @@ export class SicLstEntry {
 	 * This can be omitted if the instruction does not have bytecode data.
 	 * @see bcData
 	 */
-	constructor(source: string, bcData?: { aloc: number, rloc: number, inst: ISicInstruction | undefined } | string) {
+	constructor(source: string, bcData?: { loc: SicLocPair, inst: ISicInstruction | undefined } | string) {
 		this.source = source;
 		if (typeof bcData === "string") {
 			this.bcData = undefined;
