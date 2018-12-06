@@ -5,6 +5,7 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
+import { ISicInstruction } from "./ISicInstruction";
 import { SicBase } from "./SicBase";
 import { asByte, asHex, asWord, bytesToString } from "./SicFmt";
 import { SicLiteral } from "./SicLiteral";
@@ -18,7 +19,7 @@ import { SicLocPair, SicUseTab } from "./SicUseTab";
  * A class holding the context for a csect.
  */
 export class SicCsect {
-	/** The processed lines of code. */
+	/** The processed lines of code just as an array. */
 	public lst: SicLstEntry[];
 	/** The literal tab in use. */
 	public litTab: SicLitTab;
@@ -56,8 +57,25 @@ export class SicCsect {
 	 * Sets the starting address of the internal USE tab.
 	 * This will wipe out the current USE tab.
 	 */
-	public setStartAddr(startAddr: number) {
+	public setStartAddr(startAddr: number): void {
 		this.useTab = new SicUseTab(startAddr);
+	}
+
+	public objcodeArr(): Array<{ r: number, o: number[] }> {
+		const m = this.lst.filter(q => q.bcData !== undefined && q.bcData.inst !== undefined);
+		m.sort((a, b) => {
+			const c = (a.bcData as { loc: SicLocPair, inst: ISicInstruction });
+			const d = (b.bcData as { loc: SicLocPair, inst: ISicInstruction });
+			return c.loc.r - d.loc.r;
+		});
+		return m.map(q => {
+			const r = (q.bcData as { loc: SicLocPair, inst: ISicInstruction });
+			return { r: r.loc.r, o: r.inst.toBytes() };
+		});
+	}
+
+	public objcodeLen(): number {
+		return this.useTab.loc().r;
 	}
 }
 
@@ -67,14 +85,14 @@ export class SicCsect {
 export class SicCsectTab {
 	/** The compiler directives this SicCsectTab supports. */
 	public directives: { [key: string]: (source: string, split: SicSplit) => void };
+	/** The lst */
+	private lst: SicLstEntry[];
 	/** The START data. */
 	private startData: { name: string, loc: number } | undefined;
 	/** Hashtable containing this program's CSECTs */
 	private csects: { [key: string]: SicCsect };
 	/** The current CSECT. By default this is "" */
 	private currentSect: string;
-	/** The lst of this program */
-	private lst: SicLstEntry[];
 
 	/**
 	 * Constructs a SicCsectTab
@@ -119,7 +137,7 @@ export class SicCsectTab {
 			RESW: (source: string, split: SicSplit): void => {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESW can be jumped to.
-				this.addLst(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(split.tag, source,
 					{ loc: this.current.useTab.loc() , inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
 				this.current.useTab.inc(3 * parseNum(split.args));
@@ -128,7 +146,7 @@ export class SicCsectTab {
 			RESB: (source: string, split: SicSplit): void => {
 				// Make a new lst entry containing locctrs, but no instruction.
 				// This is so this RESB can be jumped to.
-				this.addLst(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(split.tag, source,
 					{ loc: this.current.useTab.loc(), inst: undefined }));
 				// Increment locctr by the correct amount of bytes.
 				this.current.useTab.inc(parseNum(split.args));
@@ -141,7 +159,7 @@ export class SicCsectTab {
 				}
 				// START arguments are always hexadecimal
 				this.current.setStartAddr(parseInt(split.args, 16));
-				this.addLst(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(split.tag, source,
 					{ loc: this.current.useTab.loc(), inst: undefined }));
 				this.startData = { name: split.tag, loc: this.current.useTab.aloc };
 			},
@@ -172,7 +190,7 @@ export class SicCsectTab {
 					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
 				}
-				this.addLst(new SicLstEntry(source,
+				this.addLst(new SicLstEntry(split.tag, source,
 					{ loc: this.current.useTab.loc(), inst: undefined }));
 			},
 
@@ -184,28 +202,28 @@ export class SicCsectTab {
 				catch (e) {
 					this.current.base = new SicBase(new SicPending(split.args));
 				}
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 			},
 
 			NOBASE: (source: string, split: SicSplit): void => {
 				this.current.base = undefined;
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 			},
 
 			SILENT_LTORG: (source: string, split: SicSplit): void => {
 				const l = this.current.litTab.createOrg(this.current.useTab.aloc);
 				l.forEach(v => {
-					this.addLst(new SicLstEntry(`X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
+					this.addLst(new SicLstEntry("", `X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
 						{ loc: this.current.useTab.loc(), inst: new SicLiteral(v.val) }));
 					this.current.useTab.inc(3);
 				});
 			},
 
 			LTORG: (source: string, split: SicSplit): void => {
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 				const l = this.current.litTab.createOrg(this.current.useTab.aloc);
 				l.forEach(v => {
-					this.addLst(new SicLstEntry(`X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
+					this.addLst(new SicLstEntry("", `X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
 						{ loc: this.current.useTab.loc(), inst: new SicLiteral(v.val) }));
 					this.current.useTab.inc(3);
 				});
@@ -221,29 +239,29 @@ export class SicCsectTab {
 				this.current.equTab[split.tag] = split.args;
 				// this.equTab["foo"] -> bar.
 				// this.equTab["bar"] -> ...
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 			},
 
 			USE: (source: string, split: SicSplit): void => {
 				this.current.useTab.use(split.args);
-				this.addLst(new SicLstEntry(source,
+				this.addLst(new SicLstEntry("", source,
 					{ loc: this.current.useTab.loc(), inst: undefined }));
 			},
 
 			CSECT: (source: string, split: SicSplit): void => {
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 				this.csect(split.tag);
 			},
 
 			EXTDEF: (source: string, split: SicSplit): void => {
 				const s = split.args.split(",");
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 				s.forEach(r => this.current.extDefTab.add(r));
 			},
 
 			EXTREF: (source: string, split: SicSplit): void => {
 				const s = split.args.split(",");
-				this.addLst(new SicLstEntry(source));
+				this.addLst(new SicLstEntry("", source));
 				s.forEach(r => {
 					if (this.current.extRefTab.has(r)) {
 						throw new Error("Duplicate EXTREF " + r);
@@ -260,7 +278,7 @@ export class SicCsectTab {
 	public litPool(): void {
 		const l = this.current.litTab.createOrg(this.current.useTab.aloc);
 		l.forEach(v => {
-			this.addLst(new SicLstEntry(`X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
+			this.addLst(new SicLstEntry("", `X'${asHex(v.val)}' BYTE X'${asHex(v.val)}'`,
 				{ loc: this.current.useTab.loc(), inst: new SicLiteral(v.val) }));
 			this.current.useTab.inc(3);
 		});
@@ -340,13 +358,10 @@ export class SicCsectTab {
 			return a.trim();
 		};
 
-		const mkT = (arr: SicLstEntry[]): string[] => {
+		const mkT = (arr: Array<{ r: number, o: number[] }>): string[] => {
 			const buf: string[] = [];
 			arr.forEach(l => {
-				if (l.bcData === undefined || l.bcData.inst === undefined) {
-					return;
-				}
-				buf.push(`T ${asWord(l.bcData.loc.a)} ${asByte(l.bcData.inst.length())} ${bytesToString(l.bcData.inst.toBytes())}`);
+				buf.push(`T ${asWord(l.r)} ${asByte(l.o.length)} ${bytesToString(l.o)}`);
 			});
 			return buf;
 		};
@@ -364,41 +379,23 @@ export class SicCsectTab {
 			});
 		};
 
-		const getLen = (a: SicLstEntry[]): number => {
-			let start = 0;
-			let end = 0;
-
-			for (const b of a) {
-				if (b.bcData !== undefined) {
-					start = b.bcData.loc.a;
-					break;
-				}
-			}
-			for (let i = a.length - 1; i >= 0; --i) {
-				const bc = a[i].bcData;
-				if (bc !== undefined) {
-					end = bc.loc.a + (bc.inst !== undefined ? bc.inst.length() : 0);
-					break;
-				}
-			}
-			return end - start;
-		};
-
 		const sloc = this.startData !== undefined ? this.startData.loc : 0;
 		const sname = this.startData !== undefined ? this.startData.name : "";
 
-		s.push(mkH(getLen(this.csects[""].lst), sloc, sname));
+		const ss = this.csects[""].objcodeArr();
+		s.push(mkH(this.csects[""].objcodeLen(), sloc, sname));
 		s.push(mkD(this.csects[""].extDefTab, this.csects[""].tagTab));
 		s.push(mkR(this.csects[""].extRefTab));
-		s = s.concat(mkT(this.csects[""].lst));
+		s = s.concat(mkT(ss));
 		s = s.concat(mkM(this.csects[""].modRecs));
 		s.push(mkE(sloc));
 
 		this.forEachAux((c, n) => {
-			s.push(mkH(getLen(c.lst), 0, n));
+			const sss = c.objcodeArr();
+			s.push(mkH(c.objcodeLen(), 0, n));
 			s.push(mkD(c.extDefTab, c.tagTab));
 			s.push(mkR(c.extRefTab));
-			s = s.concat(mkT(c.lst));
+			s = s.concat(mkT(sss));
 			s = s.concat(mkM(c.modRecs));
 			s.push(mkE());
 		});

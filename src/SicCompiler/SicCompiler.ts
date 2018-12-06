@@ -51,7 +51,7 @@ export class SicCompiler {
 				let instr: ISicInstruction;
 
 				// replace * with current loc
-				split.args.replace(/(#|@|=)\*$/, "$1" + this.ctab.current.useTab.aloc.toString(10));
+				split.args.replace(/(#|@|=)\*$/, "$1" + this.ctab.current.useTab.rloc.toString(10));
 				// replace strings in equTab
 				for (const key of Object.keys(this.ctab.current.equTab)) {
 					if (split.args.match(key) === null) {
@@ -71,7 +71,7 @@ export class SicCompiler {
 					if (this.ctab.current.tagTab[split.tag] !== undefined) {
 						throw new Error("Duplicate label " + split.tag);
 					}
-					this.ctab.current.tagTab[split.tag] = this.ctab.current.useTab.aloc;
+					this.ctab.current.tagTab[split.tag] = this.ctab.current.useTab.rloc;
 				}
 
 				// if this line is a directive, process the directive and continue.
@@ -105,7 +105,7 @@ export class SicCompiler {
 				}
 
 				// add the instruction to the lst
-				this.ctab.addLst(new SicLstEntry(val,
+				this.ctab.addLst(new SicLstEntry(split.tag, val,
 					{ loc: this.ctab.current.useTab.loc(), inst: instr }));
 				// increment usetab accordingly
 				this.ctab.current.useTab.inc(instr.length());
@@ -124,6 +124,11 @@ export class SicCompiler {
 				this.ctab.directives["SILENT_LTORG"]("", new SicSplit("\tSILENT_LTORG"));
 			}
 			p.useTab.correct();
+			p.lst.forEach(l => {
+				if (l.tag !== "" && l.bcData !== undefined) {
+					p.tagTab[l.tag] = l.bcData.loc.r;
+				}
+			});
 		});
 
 		// pass 2
@@ -132,9 +137,9 @@ export class SicCompiler {
 				// make all pending instructions ready
 				if (l.bcData !== undefined && l.bcData.inst !== undefined && !l.bcData.inst.ready()) {
 					try {
-						const res = l.bcData.inst.makeReady(l.bcData.loc.a, p.tagTab, p.litTab, p.extRefTab);
+						const res = l.bcData.inst.makeReady(l.bcData.loc.r, p.tagTab, p.litTab, p.extRefTab);
 						if (res !== null) {
-							p.modRecs.push({loc: l.bcData.loc.a, len: 5, symbol: res});
+							p.modRecs.push({loc: l.bcData.loc.r, len: 5, symbol: res});
 						}
 					}
 					catch (e) {

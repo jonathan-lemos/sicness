@@ -28,9 +28,16 @@ export class SicUseTab {
 	 */
 	public useTab: Array<{label: string, rloc: number, locsent: SicLocPair[]}>;
 	/**
+	 * The current USE as a string.
+	 */
+	public curUse: string;
+	/**
 	 * The current USE as an array index.
 	 */
-	public currentUse: number;
+	private curIndex: number;
+	/**
+	 *
+	 */
 	/**
 	 * The absolute line of code of the program.
 	 */
@@ -46,7 +53,8 @@ export class SicUseTab {
 	constructor(startloc: number) {
 		this.ALOC = startloc;
 		this.useTab = [{label: "", rloc: startloc, locsent: []}];
-		this.currentUse = 0;
+		this.curIndex = 0;
+		this.curUse = "";
 	}
 
 	/**
@@ -89,13 +97,14 @@ export class SicUseTab {
 	 * Switches the USE block to one of the given label.
 	 */
 	public use(label: string): void {
+		this.curUse = label;
 		const index = this.find(label);
 		if (index === null) {
 			this.useTab.push({label, rloc: 0, locsent: []});
-			this.currentUse = this.useTab.length - 1;
+			this.curIndex = this.useTab.length - 1;
 		}
 		else {
-			this.currentUse = index;
+			this.curIndex = index;
 		}
 	}
 
@@ -122,6 +131,6 @@ export class SicUseTab {
 	}
 
 	private get current(): { label: string, rloc: number, locsent: SicLocPair[] } {
-		return this.useTab[this.currentUse];
+		return this.useTab[this.curIndex];
 	}
 }

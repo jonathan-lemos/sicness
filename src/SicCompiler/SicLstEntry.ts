@@ -13,6 +13,8 @@ import { SicLocPair } from "./SicUseTab";
  * Class that represents a processed line of code.
  */
 export class SicLstEntry {
+	/** The label of this line, or "" if there isn't one. */
+	public tag: string;
 	/** The verbatim source code that made this instruction. */
 	public source: string;
 	/**
@@ -35,7 +37,8 @@ export class SicLstEntry {
 	 * This can be omitted if the instruction does not have bytecode data.
 	 * @see bcData
 	 */
-	constructor(source: string, bcData?: { loc: SicLocPair, inst: ISicInstruction | undefined } | string) {
+	constructor(tag: string, source: string, bcData?: { loc: SicLocPair, inst: ISicInstruction | undefined } | string) {
+		this.tag = tag;
 		this.source = source;
 		if (typeof bcData === "string") {
 			this.bcData = undefined;
