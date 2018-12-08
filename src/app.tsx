@@ -9,11 +9,15 @@ import "jquery";
 import React from "react";
 import AceEditor from "react-ace";
 import ReactDOM from "react-dom";
+import { DsNavbar } from "./DsNavbar";
+import { IDsAppState } from "./IDsAppState";
 import { SicCompiler } from "./SicCompiler/SicCompiler";
 
 const editor = ace.edit("editor");
 editor.setTheme("ace/theme/monokai");
 editor.session.setMode("ace/mode/sicxe");
+
+const mode: IDsAppState = "compiler";
 
 $("#output").val("");
 
