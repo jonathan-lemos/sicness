@@ -43,13 +43,16 @@ export class SicSpace implements ISicInstruction {
 	 * @returns The given number as a byte array.
 	 */
 	public static splitByte(n: number): number[] {
-		if (n >= 0) {
-			sicCheckUnsigned(n, 8);
-		}
-		else {
+		if (n < 0) {
 			n = sicMakeUnsigned(n, 8);
+			return [n];
 		}
-		return [0, 0, n];
+		let arr: number[] = [];
+		while (n > 0) {
+			arr = [n & 0xFF].concat(arr);
+			n >>>= 8;
+		}
+		return arr;
 	}
 
 	/** WORD | BYTE */

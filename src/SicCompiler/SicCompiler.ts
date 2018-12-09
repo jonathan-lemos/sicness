@@ -114,7 +114,7 @@ export class SicCompiler {
 			catch (e) {
 				this.errflag = true;
 				// report it
-				this.ctab.addLst(new SicLstEntry(val, (e as Error).message));
+				this.ctab.addLst(new SicLstEntry("", val, (e as Error).message));
 			}
 		});
 

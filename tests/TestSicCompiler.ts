@@ -708,8 +708,8 @@ describe("SicSpace tests", () => {
 
 		expect(w.length()).to.equal(3);
 		expect(w.toBytes()).to.eql([0xAB, 0xCD, 0x12]);
-		expect(b.length()).to.equal(3);
-		expect(b.toBytes()).to.eql([0x00, 0x00, 0xF4]);
+		expect(b.length()).to.equal(1);
+		expect(b.toBytes()).to.eql([0xF4]);
 	});
 
 	it("throws on invalid arguments", () => {
@@ -786,7 +786,7 @@ describe("SicCompiler tests", () => {
 	];
 	const objExpect = [
 		// TEST = name of prog, 000100 = start loc, 001139 = length of prog
-		"H TEST 000100 001139",
+		"HTEST 000100 001139",
 		// 000100 = loc, 03 = len, 020004 = obj code
 		"T 000100 03 020004",
 		"T 000103 03 6B201A",
@@ -843,11 +843,11 @@ describe("SicCompiler tests", () => {
 		"8    \t12F  \t12F  \t        \t\tEND TEST",
 	];
 	const csectObj = [
-		"H TEST 000123 00012F",
+		"HTEST 000123 00012F",
 		"D YEET 000126",
 		"T 000123 03 010004",
 		"E 000123",
-		"H NSEC 000000 000004",
+		"HNSEC 000000 000004",
 		"R YEET",
 		"T 000000 04 03100000",
 		"M 000000 05 +YEET",

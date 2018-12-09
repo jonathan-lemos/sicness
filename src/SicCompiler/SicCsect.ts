@@ -152,7 +152,6 @@ export class SicCsectTab {
 				this.current.useTab.inc(parseNum(split.args));
 			},
 
-			// TODO fix bug where START can be used multiple times if starting locctr === 0
 			START: (source: string, split: SicSplit): void => {
 				if (this.currentSect !== "" || this.current.lst.length !== 0) {
 					throw new Error("START can only be used as the first line of a program.");
@@ -169,12 +168,13 @@ export class SicCsectTab {
 				// find the correct CSECT
 				let cs: string;
 				if (split.args === "") {
-					throw new Error("END must have a label");
-				}
-				if (this.startData !== undefined && this.startData.name === split.args) {
+					// throw new Error("END must have a label");
 					cs = "";
 				}
-				else if (this.csects[name] === undefined) {
+				else if (this.startData !== undefined && this.startData.name === split.args) {
+					cs = "";
+				}
+				else if (this.csects[split.args] === undefined) {
 					throw new Error(`${split.args} does not correspond to any given CSECT/START label.`);
 				}
 				else {
@@ -186,10 +186,12 @@ export class SicCsectTab {
 					this.directives["SILENT_LTORG"]("", new SicSplit("\tSILENT_LTORG"));
 				}
 				this.current.useTab.correct();
+				/*
 				if ((this.startData === undefined && split.args !== "") ||
 					(this.startData !== undefined && split.args !== this.startData.name)) {
 					throw new Error("END label must be the same as the start label.");
 				}
+				*/
 				this.addLst(new SicLstEntry(split.tag, source,
 					{ loc: this.current.useTab.loc(), inst: undefined }));
 			},
@@ -337,7 +339,7 @@ export class SicCsectTab {
 			if (name === undefined) {
 				name = "";
 			}
-			return `H ${name} ${asWord(loc)} ${asWord(len)}`;
+			return `H${name} ${asWord(loc)} ${asWord(len)}`;
 		};
 
 		const mkD = (defs: Set<string>, tagTab: { [key: string]: number }): string => {
