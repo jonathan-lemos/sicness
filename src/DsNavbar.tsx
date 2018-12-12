@@ -7,9 +7,9 @@
 
 import React from "react";
 import { Navbar, NavbarBrand } from "reactstrap";
+import { IDsAppState } from "./DsApp";
 import { DsNavbarButton } from "./DsNavbarButton";
 import { DsNavbarLink } from "./DsNavbarLink";
-import { IDsAppState } from "./IDsAppState";
 
 export interface IDsNavbarProps {
 	brand: string;

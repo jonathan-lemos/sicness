@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { IDsAppState } from "./IDsAppState";
+import { IDsAppState } from "./DsApp";
 
 export interface IDsFooterProps {
 	brand: string;
