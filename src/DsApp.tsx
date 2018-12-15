@@ -6,7 +6,7 @@
 */
 
 import React from "react";
-import { DsCompiler } from "./DsCompiler";
+import { DsCompiler, KeyBindingsType } from "./DsCompiler";
 import { DsDebugger } from "./DsDebugger";
 import { DsFooter } from "./DsFooter";
 import { DsNavbar } from "./DsNavbar";
@@ -17,8 +17,10 @@ export interface IDsAppProps {
 	href: string;
 }
 
+export type ActiveType = "compiler" | "debugger";
 export interface IDsAppState {
-	active: "compiler" | "debugger";
+	active: ActiveType;
+	compKeyBindings: KeyBindingsType;
 }
 
 export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
@@ -35,24 +37,55 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 
 	constructor(props: IDsAppProps) {
 		super(props);
-		this.switchState = this.switchState.bind(this);
 
-		this.navbar = <DsNavbar brand={this.props.brand} font={this.props.font} href={this.props.href} />;
+		this.navbar = <DsNavbar
+			brand={this.props.brand}
+			font={this.props.font}
+			href={this.props.href}
+			onCompile={
+				() => {
+					this.navbar;
+				}
+			}
+		/>;
 		this.compiler = <DsCompiler />;
 		this.debugger = <DsDebugger />;
 		this.footer = <DsFooter />;
+
+		this.state = {
+			active: "compiler",
+			compKeyBindings: "",
+		};
+
+		this.getActive = this.getActive.bind(this);
+		this.setActive = this.setActive.bind(this);
+		this.getKeyBindings = this.getKeyBindings.bind(this);
+		this.setKeyBindings = this.setKeyBindings.bind(this);
+		this.copyState = this.copyState.bind(this);
 	}
 
-	public switchState(state: IDsAppState): void {
-		this.setState(state);
-	}
-
-	public getState(): "compiler" | "debugger" {
+	public getActive(): ActiveType {
 		return this.state.active;
 	}
 
+	public setActive(s: ActiveType): void {
+		const q = this.copyState();
+		q.active = s;
+		this.setState(q);
+	}
+
+	public getKeyBindings(): KeyBindingsType {
+		return this.state.compKeyBindings;
+	}
+
+	public setKeyBindings(s: KeyBindingsType): void {
+		const q = this.copyState();
+		q.compKeyBindings = s;
+		this.setState(q);
+	}
+
 	public render() {
-		const content = this.getState() === "compiler" ?
+		const content = this.getActive() === "compiler" ?
 			this.compiler : this.debugger;
 
 		return (
@@ -62,5 +95,13 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 				{this.footer}
 			</div>
 		);
+	}
+
+	private copyState(): IDsAppState {
+		const q = this.state;
+		return {
+			active: q.active,
+			compKeyBindings: q.compKeyBindings,
+		};
 	}
 }

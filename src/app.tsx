@@ -8,15 +8,7 @@
 import "jquery";
 import React from "react";
 import ReactDOM from "react-dom";
-
-import { DsApp, IDsAppState } from "./DsApp";
-import { SicCompiler } from "./SicCompiler/SicCompiler";
-
-const mode: IDsAppState = {
-	active: "compiler",
-};
-
-$("#output").val("");
+import { DsApp, IDsAppProps, IDsAppState } from "./DsApp";
 
 const textToArray = (innerText: string): string[] => {
 	return innerText.split("\n");
@@ -26,7 +18,17 @@ const arrayToText = (array: string[]): string => {
 	return array.reduce((acc, val) => acc + "\n" + val);
 };
 
-$("#btnCompile").click((): void => {
+const byId = (id: string): HTMLElement => {
+	const e =  document.getElementById(id);
+	if (e == null) {
+		throw new Error(`No element with id "${id}"`);
+	}
+	return e;
+};
+
+const app = <DsApp />;
+
+const btnCompileClick = (): void => {
 	try {
 		const arr = textToArray(editor.getValue());
 		const comp = new SicCompiler(arr);

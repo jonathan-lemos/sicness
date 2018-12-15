@@ -7,7 +7,7 @@
 
 import React from "react";
 import { Navbar, NavbarBrand } from "reactstrap";
-import { IDsAppState } from "./DsApp";
+import { ActiveType, IDsAppState } from "./DsApp";
 import { DsNavbarButton } from "./DsNavbarButton";
 import { DsNavbarLink } from "./DsNavbarLink";
 
@@ -24,8 +24,8 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsAppState>{
 		brand: "down with the SICness",
 		font: "Comic Sans MS",
 		href: "#",
-		onCompile: () => {/**/},
-		onDebug: () => {/**/},
+		onCompile: () => {/**/ },
+		onDebug: () => {/**/ },
 	};
 
 	constructor(props: IDsNavbarProps) {
@@ -33,7 +33,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsAppState>{
 		this.switchState = this.switchState.bind(this);
 	}
 
-	public switchState(active?: "compiler" | "debugger"): void {
+	public switchState(active?: ActiveType): void {
 		if (active === undefined) {
 			active = this.state.active === "compiler" ? "debugger" : "compiler";
 		}
@@ -43,7 +43,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsAppState>{
 		this.setState({ active: this.state.active });
 	}
 
-	public getState(): "compiler" | "debugger" {
+	public getState(): ActiveType {
 		return this.state.active;
 	}
 
