@@ -8,13 +8,20 @@
 import React from "react";
 import AceEditor from "react-ace";
 import { Col, Row } from "reactstrap";
+import { prototype } from "module";
 
 export type KeyBindingsType = "" | "vim" | "emacs";
 
 export interface IDsCompilerProps {
 	editorValue: string;
+	getEditorText: () => string;
+	getKeyBindings: () => KeyBindingsType;
+	getOutputText: () => string;
 	keyBindings: KeyBindingsType;
 	outputValue: string;
+	setEditorText: (s: string) => void;
+	setKeyBindings: (s: KeyBindingsType) => void;
+	setOutputText: (s: string) => void;
 }
 
 export interface IDsCompilerState {
@@ -26,14 +33,51 @@ export interface IDsCompilerState {
 export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerState> {
 	public static defaultProps: IDsCompilerProps = {
 		editorValue: "",
+		getEditorText: () => "",
+		getKeyBindings: () => "",
+		getOutputText: () => "",
 		keyBindings: "",
 		outputValue: "",
+		setEditorText: (s: string) => {/** */},
+		setKeyBindings: (s: string) => {/** */},
+		setOutputText: (s: string) => {/** */},
 	};
 
 	private editor: JSX.Element;
 	private output: JSX.Element;
 
 	constructor(props: IDsCompilerProps) {
+		props.getEditorText = () => {
+			return this.state.editorState;
+		};
+
+		props.getKeyBindings = () => {
+			return this.state.keyBindings;
+		};
+
+		props.getOutputText = () => {
+			return this.state.outputState;
+		};
+
+		props.setEditorText = (s: string): void => {
+			const q = this.copyState();
+			q.editorState = s;
+			this.setState(q);
+		};
+
+		props.setKeyBindings = (s: KeyBindingsType): void => {
+			const q = this.copyState();
+			q.keyBindings = s;
+			this.setState(q);
+			this.editor.props.keyBindings = s;
+		};
+
+		props.setOutputText = (s: string) => {
+			const q = this.copyState();
+			q.outputState = s;
+			this.setState(q);
+		};
+
 		super(props);
 		this.state = {
 			editorState: this.props.editorValue,
@@ -41,12 +85,12 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 			outputState: this.props.outputValue,
 		};
 
-		this.getEditorText = this.getEditorText.bind(this);
-		this.setEditorText = this.setEditorText.bind(this);
-		this.getOutputText = this.getOutputText.bind(this);
-		this.setOutputText = this.setOutputText.bind(this);
-		this.getKeyBindings = this.getKeyBindings.bind(this);
-		this.setKeyBindings = this.setKeyBindings.bind(this);
+		this.props.getEditorText = this.props.getEditorText.bind(this);
+		this.props.setEditorText = this.props.setEditorText.bind(this);
+		this.props.getOutputText = this.props.getOutputText.bind(this);
+		this.props.setOutputText = this.props.setOutputText.bind(this);
+		this.props.getKeyBindings = this.props.getKeyBindings.bind(this);
+		this.props.setKeyBindings = this.props.setKeyBindings.bind(this);
 		this.handleEditorChange = this.handleEditorChange.bind(this);
 		this.handleOutputChange = this.handleOutputChange.bind(this);
 		this.copyState = this.copyState.bind(this);
@@ -69,37 +113,6 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 		/>;
 	}
 
-	public getEditorText(): string {
-		return this.state.editorState;
-	}
-
-	public setEditorText(s: string): void {
-		const q = this.copyState();
-		q.editorState = s;
-		this.setState(q);
-	}
-
-	public getOutputText(): string {
-		return this.state.editorState;
-	}
-
-	public setOutputText(s: string): void {
-		const q = this.copyState();
-		q.outputState = s;
-		this.setState(q);
-	}
-
-	public getKeyBindings(): KeyBindingsType {
-		return this.props.keyBindings;
-	}
-
-	public setKeyBindings(s: KeyBindingsType): void {
-		const q = this.copyState();
-		q.keyBindings = s;
-		this.setState(q);
-		this.editor.props.keyBindings = s;
-	}
-
 	public render() {
 		return (
 			<Row className="bg-dark flex d-flex justify-content-start flex-fill">
@@ -114,11 +127,11 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 	}
 
 	private handleEditorChange(value: string, event?: any): void {
-		this.setEditorText(value);
+		this.props.setEditorText(value);
 	}
 
 	private handleOutputChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
-		this.setOutputText(event.target.value);
+		this.props.setOutputText(event.target.value);
 	}
 
 	private copyState(): IDsCompilerState {

@@ -30,24 +30,15 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 		href: "#",
 	};
 
-	private navbar: JSX.Element;
-	private compiler: JSX.Element;
-	private debugger: JSX.Element;
-	private footer: JSX.Element;
+	private navbar: DsNavbar | null;
+	private compiler: DsCompiler | null;
+	private debugger: DsDebugger | null;
+	private footer: DsFooter | null;
 
 	constructor(props: IDsAppProps) {
 		super(props);
 
-		this.navbar = <DsNavbar
-			brand={this.props.brand}
-			font={this.props.font}
-			href={this.props.href}
-			onCompile={
-				() => {
-					this.navbar;
-				}
-			}
-		/>;
+		this.navbar = null;
 		this.compiler = <DsCompiler />;
 		this.debugger = <DsDebugger />;
 		this.footer = <DsFooter />;
@@ -86,15 +77,26 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 
 	public render() {
 		const content = this.getActive() === "compiler" ?
-			this.compiler : this.debugger;
+			<DsCompiler ref={c => this.compiler = c} /> :
+			<DsDebugger ref={d => this.debugger = d} />;
 
 		return (
 			<div>
-				{this.navbar}
+				<DsNavbar
+					brand={this.props.brand}
+					font={this.props.font}
+					href={this.props.href}
+					ref={nav => this.navbar = nav}
+					onCompile={this.handleCompile}
+				/>
 				{content}
 				{this.footer}
 			</div>
 		);
+	}
+
+	private handleCompile() {
+
 	}
 
 	private copyState(): IDsAppState {

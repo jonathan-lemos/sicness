@@ -11,43 +11,53 @@ import { ActiveType, IDsAppState } from "./DsApp";
 import { DsNavbarButton } from "./DsNavbarButton";
 import { DsNavbarLink } from "./DsNavbarLink";
 
-export interface IDsNavbarProps {
-	brand: string;
-	font: string;
-	href: string;
-	onCompile: () => void;
-	onDebug: () => void;
+export interface IDsNavEntry {
+	action: string;
+	id: ActiveType;
+	title: string;
+	onClick: () => void;
 }
 
-export class DsNavbar extends React.Component<IDsNavbarProps, IDsAppState>{
+export interface IDsNavbarProps {
+	brand: string;
+	entries: IDsNavEntry[];
+	font: string;
+	href: string;
+}
+
+export interface IDsNavbarState {
+	active: ActiveType;
+}
+
+export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 	public static defaultProps: IDsNavbarProps = {
 		brand: "down with the SICness",
+		entries: [],
 		font: "Comic Sans MS",
 		href: "#",
-		onCompile: () => {/**/ },
-		onDebug: () => {/**/ },
 	};
 
 	constructor(props: IDsNavbarProps) {
 		super(props);
-		this.switchState = this.switchState.bind(this);
+		if (this.props.entries.length === 0) {
+			throw new Error("The entries array in a DsNavbar must have at least one element.");
+		}
+		this.getActive = this.getActive.bind(this);
+		this.setActive = this.setActive.bind(this);
+		this.state = { active: this.props.entries[0].id };
 	}
 
-	public switchState(active?: ActiveType): void {
-		if (active === undefined) {
-			active = this.state.active === "compiler" ? "debugger" : "compiler";
-		}
-		if (active === this.state.active) {
-			return;
-		}
-		this.setState({ active: this.state.active });
-	}
-
-	public getState(): ActiveType {
+	public getActive(): ActiveType {
 		return this.state.active;
 	}
 
+	public setActive(a: ActiveType): void {
+		this.setState({active: a});
+	}
+
 	public render() {
+		
+
 		return (
 			<Navbar className="navbar navbar-expand-md navbar-dark bg-dark">
 				<NavbarBrand href="#" style={`font-face: ${this.props.font}`}>
