@@ -14,17 +14,19 @@ export interface IDsNavbarEntryProps {
 	action: string;
 	id: ActiveType | null;
 	onClick: (id: ActiveType) => void;
-	onClickAction: () => void;
 	title: string;
-	type: "active" | "inactive" | "disabled";
+	type: DsNavbarEntryType;
 }
 
-export class DsNavbarLink extends React.Component<IDsNavbarEntryProps> {
+export interface IDsNavbarEntryState {
+	type: DsNavbarEntryType;
+}
+
+export class DsNavbarEntry extends React.Component<IDsNavbarEntryProps, IDsNavbarEntryState> {
 	public static defaultProps: IDsNavbarEntryProps = {
 		action: "Action",
 		id: null,
 		onClick: (id: ActiveType) => {/** */},
-		onClickAction: () => {/** */},
 		title: "Title",
 		type: "inactive",
 	};
@@ -34,13 +36,24 @@ export class DsNavbarLink extends React.Component<IDsNavbarEntryProps> {
 			throw new Error("This DsNavbarEntry does not have an id");
 		}
 		super(props);
+
+		this.state = {type: this.props.type};
 		this.handleClick = this.handleClick.bind(this);
+		this.getType = this.getType.bind(this);
+		this.setType = this.setType.bind(this);
+	}
+
+	public getType(): DsNavbarEntryType {
+		return this.state.type;
+	}
+
+	public setType(t: DsNavbarEntryType): void {
+		this.setState({type: t});
 	}
 
 	public render() {
-		const liClass = "nav-item" + (this.props.type === "active" ? " active" : "");
-		const aClass = "nav-link" + (this.props.type === "disabled" ? " disabled" : "");
-
+		const liClass = "nav-item" + (this.state.type === "active" ? " active" : "");
+		const aClass = "nav-link" + (this.state.type === "disabled" ? " disabled" : "");
 		return (
 			<li className={liClass}>
 				<a className={aClass} onClick={this.handleClick}>

@@ -7,17 +7,15 @@
 
 import React from "react";
 import { Navbar, NavbarBrand } from "reactstrap";
-import { ActiveType, IDsAppState } from "./DsApp";
-import { DsNavbarButton } from "./DsNavbarButton";
-import { DsNavbarLink } from "./DsNavbarLink";
-
+import { ActiveType } from "./DsApp";
+import { DsNavbarActionButton } from "./DsNavbarActionButton";
+import { DsNavbarEntry } from "./DsNavbarEntry";
 export interface IDsNavEntry {
 	action: string;
 	id: ActiveType;
-	title: string;
 	onClick: () => void;
+	title: string;
 }
-
 export interface IDsNavbarProps {
 	brand: string;
 	entries: IDsNavEntry[];
@@ -37,14 +35,21 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 		href: "#",
 	};
 
+	private entries: Array<DsNavbarEntry | null>;
+
 	constructor(props: IDsNavbarProps) {
 		super(props);
 		if (this.props.entries.length === 0) {
 			throw new Error("The entries array in a DsNavbar must have at least one element.");
 		}
+
 		this.getActive = this.getActive.bind(this);
 		this.setActive = this.setActive.bind(this);
+		this.makeChildren = this.makeChildren.bind(this);
+		this.handleChange = this.handleChange.bind(this);
+
 		this.state = { active: this.props.entries[0].id };
+		this.entries = [];
 	}
 
 	public getActive(): ActiveType {
@@ -56,8 +61,6 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 	}
 
 	public render() {
-		
-
 		return (
 			<Navbar className="navbar navbar-expand-md navbar-dark bg-dark">
 				<NavbarBrand href="#" style={`font-face: ${this.props.font}`}>
@@ -75,42 +78,59 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 				</button>
 				<div id="navbarCollapse" className="collapse navbar-collapse">
 					<ul className="nav navbar-nav mr-auto">
-						{this.getButtonBank()}
+						{this.makeActionButton(this.entries.reduce((a, v) => {
+							if (a === null) {
+								return a;
+							}
+							if (v.id === this.state.active) {
+								a = v;
+							}
+							return a;
+						}))}
 					</ul>
 					<ul className="nav navbar-nav mr-auto navbar-right">
-						<DsNavbarLink
-							buttonState={this.state.active === "compiler" ? "active" : "inactive"}
-							onClick={() => { this.switchState("compiler"); }}
-							text="Compiler" />
-						<DsNavbarLink
-							buttonState={this.state.active === "debugger" ? "active" : "inactive"}
-							onClick={() => { this.switchState("debugger"); }}
-							text="Debugger" />
+						{this.makeChildren(this.props.entries, this.state.active)}
 					</ul>
 				</div>
 			</Navbar>
 		);
 	}
 
-	private getButtonBank() {
-		switch (this.state.active) {
-			case "compiler":
-				return (
-					<DsNavbarButton
-						onClick={this.props.onCompile}
-						text="Compile"
-						theme="danger" />
-				);
-			case "debugger":
-				return (
-					<DsNavbarButton
-						onClick={this.props.onDebug}
-						text="Debug"
-						theme="danger" />
-				);
-			// shut up tslint
-			default:
-				throw new Error(`this.state.active cannot be ${this.state.active}`);
+	private makeActionButton(entries: IDsNavEntry[], active: ActiveType): JSX.Element {
+		for (const entry of entries) {
+			if (entry === null || entry.id !== active) {
+				continue;
+			}
+
+			return <DsNavbarActionButton
+				id={entry.id}
+				onClick={entry.onClick}
+				theme="danger"
+				title={entry.action}
+			/>;
+		}
+		throw new Error("Could not find button with current active id: " + active);
+	}
+
+	private makeChildren(entries: IDsNavEntry[], active: ActiveType): JSX.Element[] {
+		return entries.map(e => {
+			return <DsNavbarEntry
+				action={e.action}
+				id={e.id}
+				onClick={this.handleChange}
+				ref={entry => this.entries.push(entry)}
+				title={e.title}
+				type={e.id === active ? "active" : "inactive"}
+			/>;
+		});
+	}
+
+	private handleChange(id: ActiveType): void {
+		for (const e of this.entries) {
+			if (e === null) {
+				continue;
+			}
+			e.setType(e.props.id === id ? "active" : "inactive");
 		}
 	}
 }
