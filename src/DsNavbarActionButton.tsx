@@ -37,15 +37,13 @@ export class DsNavbarActionButton extends React.Component<IDsNavbarButtonProps> 
 		const btnClass = "btn" + (this.props.theme === "default" ? "" : (` btn-outline-${this.props.theme}`));
 
 		return (
-			<button
-				className={btnClass}
-				onClick={this.handleClick}>
-				{this.props.text}
+			<button className={btnClass} onClick={this.handleClick}>
+				{this.props.title}
 			</button>
 		);
 	}
 
-	private handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
+	private handleClick(event: React.MouseEvent<HTMLButtonElement>) {
 		this.props.onClick(this.props.id as ActiveType);
 	}
 }

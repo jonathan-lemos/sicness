@@ -11,6 +11,7 @@ import { DsDebugger } from "./DsDebugger";
 import { DsFooter } from "./DsFooter";
 import { DsNavbar, IDsNavEntry } from "./DsNavbar";
 import { SicCompiler } from "./SicCompiler/SicCompiler";
+import Container from "reactstrap/lib/Container";
 
 export interface IDsAppProps {
 	brand: string;
@@ -94,7 +95,7 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 		];
 
 		return (
-			<div>
+			<Container className="container-fluid bg-dark d-flex h-100 flex-column">
 				<DsNavbar
 					brand={this.props.brand}
 					entries={entries}
@@ -104,22 +105,27 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 				/>
 				{content}
 				<DsFooter ref={f => this.footer = f} />
-			</div>
+			</Container>
 		);
 	}
 
 	private handleCompile(): void {
-		if (this.compiler === null) {
-			throw new Error("this.compiler was null when handleCompile() was called.");
+		try {
+			if (this.compiler === null) {
+				throw new Error("this.compiler was null when handleCompile() was called.");
+			}
+			const lines = this.compiler.getEditorText().split("\n");
+			const sicc = new SicCompiler(lines);
+			let output = [];
+			output.push("-----lst-----");
+			output = output.concat(sicc.makeLst());
+			output = output.concat(["", "", "-----obj-----"]);
+			output = output.concat(sicc.makeObj());
+			this.compiler.setOutputText(output.reduce((a, v) => a + "\n" + v, ""));
 		}
-		const lines = this.compiler.getEditorText().split("\n");
-		const sicc = new SicCompiler(lines);
-		let output = [];
-		output.push("-----lst-----");
-		output = output.concat(sicc.makeLst());
-		output = output.concat(["", "", "-----obj-----"]);
-		output = output.concat(sicc.makeObj());
-		this.compiler.setOutputText(output.reduce((a, v) => a + "\n" + v, ""));
+		catch (e) {
+			alert((e as Error).message);
+		}
 	}
 
 	private handleDebug(): void {

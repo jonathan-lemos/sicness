@@ -12,24 +12,9 @@
 </head>
 
 <body>
-	<div class="container-fluid bg-dark d-flex h-100 flex-column">
-		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-			<a class="navbar-brand" href="#"><font face="Comic Sans MS">down with the SICness</font></a>
-			<ul class="navbar-nav">
-				<button id="btnCompile" class="btn btn-outline-danger">Compile</button>
-			</ul>
-		</nav>
-
-		<div class="row bg-dark flex d-flex justify-content-start flex-fill">
-			<div class="col">
-				<div id="editor"></div>
-			</div>
-			<div class="col">
-				<textarea class="form-control bg-dark text-light" id="output" placeholder="Output goes here" readonly="true" wrap="soft"></textarea>
-			</div>
-		</div>
-	</div>
-
+	<main id="app"></main>
+	<script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+	<script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
 	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
 	 crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
@@ -39,4 +24,5 @@
 	<script src="ace/ace.js"></script>
 	<script src="sicness.min.js"></script>
 </body>
+
 </html>

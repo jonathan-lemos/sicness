@@ -18,6 +18,7 @@ var tsProject = tsc.createProject("tsconfig.json");
 gulp.task("build-app", function() {
     return gulp.src([
         "src/**/*.ts",
+        "src/**/*.tsx",
     ])
     .pipe(tsProject())
     .js.pipe(gulp.dest("dist"));
@@ -26,7 +27,9 @@ gulp.task("build-app", function() {
 gulp.task("lint", function() {
     return gulp.src([
         "src/**/*.ts",
-        "tests/*.ts"
+        "src/**/*.tsx",
+        "tests/*.ts",
+        "test/**/*.tsx"
     ])
         .pipe(tslint({
             formatter: "verbose"
@@ -50,7 +53,7 @@ gulp.task("bundle", function() {
         .pipe(source(outputFileName))
         .pipe(buffer())
         .pipe(sourcemaps.init({ loadMaps: true }))
-        .pipe(uglify())
+//        .pipe(uglify())
         .pipe(sourcemaps.write('./'))
         .pipe(gulp.dest(outputFolder));
 });
@@ -70,6 +73,7 @@ var tsTestProject = tsc.createProject("tsconfig.json");
 gulp.task("build-test", function() {
     return gulp.src([
         "tests/*.ts",
+        "test/*.tsx",
     ])
         .pipe(tsTestProject())
         .js.pipe(gulp.dest("dist"));

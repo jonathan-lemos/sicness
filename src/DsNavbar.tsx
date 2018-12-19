@@ -78,15 +78,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 				</button>
 				<div id="navbarCollapse" className="collapse navbar-collapse">
 					<ul className="nav navbar-nav mr-auto">
-						{this.makeActionButton(this.entries.reduce((a, v) => {
-							if (a === null) {
-								return a;
-							}
-							if (v.id === this.state.active) {
-								a = v;
-							}
-							return a;
-						}))}
+						{this.makeActionButton(this.props.entries, this.state.active)}
 					</ul>
 					<ul className="nav navbar-nav mr-auto navbar-right">
 						{this.makeChildren(this.props.entries, this.state.active)}
