@@ -6,12 +6,12 @@
 */
 
 import React from "react";
+import { Container } from "reactstrap";
 import { DsCompiler, KeyBindingsType } from "./DsCompiler";
 import { DsDebugger } from "./DsDebugger";
 import { DsFooter } from "./DsFooter";
 import { DsNavbar, IDsNavEntry } from "./DsNavbar";
 import { SicCompiler } from "./SicCompiler/SicCompiler";
-import Container from "reactstrap/lib/Container";
 
 export interface IDsAppProps {
 	brand: string;

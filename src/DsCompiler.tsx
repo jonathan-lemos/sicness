@@ -5,9 +5,12 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
+import brace from "brace";
 import React from "react";
 import AceEditor from "react-ace";
 import { Col, Row } from "reactstrap";
+
+import "./mode-sicxe";
 
 export type KeyBindingsType = "" | "vim" | "emacs";
 
@@ -84,8 +87,8 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 			<Row className="bg-dark flex d-flex justify-content-start flex-fill">
 				<Col>
 					<AceEditor
-						mode="sicxe"
-						theme="monokai"
+						mode="brace/mode/sicxe"
+						theme="brace/mode/monokai"
 						name="editor"
 						keyboardHandler={this.state.keyBindings}
 						value={this.state.editorState}

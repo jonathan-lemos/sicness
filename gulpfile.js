@@ -17,6 +17,7 @@ var tsProject = tsc.createProject("tsconfig.json");
 
 gulp.task("build-app", function() {
     return gulp.src([
+        "src/**/*.js",
         "src/**/*.ts",
         "src/**/*.tsx",
     ])
@@ -26,6 +27,7 @@ gulp.task("build-app", function() {
 
 gulp.task("lint", function() {
     return gulp.src([
+        "src/**/*.js",
         "src/**/*.ts",
         "src/**/*.tsx",
         "tests/*.ts",
@@ -46,7 +48,7 @@ gulp.task("bundle", function() {
     var bundler = browserify({
         debug: true,
         standalone: libraryName
-    }).ignore(["ace", "ace-builds", "jquery"]);
+    }).ignore(["jquery"]);
 
     return bundler.add(mainTsFilePath)
         .bundle()
