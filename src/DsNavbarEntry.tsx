@@ -12,7 +12,7 @@ export type DsNavbarEntryType = "active" | "inactive" | "disabled";
 
 export interface IDsNavbarEntryProps {
 	action: string;
-	id: ActiveType | null;
+	identifier: ActiveType | null;
 	onClick: (id: ActiveType) => void;
 	title: string;
 	type: DsNavbarEntryType;
@@ -25,14 +25,14 @@ export interface IDsNavbarEntryState {
 export class DsNavbarEntry extends React.Component<IDsNavbarEntryProps, IDsNavbarEntryState> {
 	public static defaultProps: IDsNavbarEntryProps = {
 		action: "Action",
-		id: null,
+		identifier: null,
 		onClick: (id: ActiveType) => {/** */},
 		title: "Title",
 		type: "inactive",
 	};
 
 	constructor(props: IDsNavbarEntryProps) {
-		if (props.id === null) {
+		if (props.identifier === null) {
 			throw new Error("This DsNavbarEntry does not have an id");
 		}
 		super(props);
@@ -64,6 +64,6 @@ export class DsNavbarEntry extends React.Component<IDsNavbarEntryProps, IDsNavba
 	}
 
 	private handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
-		this.props.onClick(this.props.id as ActiveType);
+		this.props.onClick(this.props.identifier as ActiveType);
 	}
 }

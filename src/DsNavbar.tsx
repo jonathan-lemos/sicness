@@ -63,7 +63,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 	public render() {
 		return (
 			<Navbar className="navbar navbar-expand-md navbar-dark bg-dark">
-				<NavbarBrand href="#" style={`font-face: ${this.props.font}`}>
+				<NavbarBrand href="#" style={{fontFace: this.props.font}}>
 					{this.props.brand}
 				</NavbarBrand>
 				<button
@@ -95,7 +95,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 			}
 
 			return <DsNavbarActionButton
-				id={entry.id}
+				identifier={entry.id}
 				onClick={entry.onClick}
 				theme="danger"
 				title={entry.action}
@@ -105,10 +105,11 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 	}
 
 	private makeChildren(entries: IDsNavEntry[], active: ActiveType): JSX.Element[] {
-		return entries.map(e => {
+		return entries.map((e, i) => {
 			return <DsNavbarEntry
 				action={e.action}
-				id={e.id}
+				identifier={e.id}
+				key={i}
 				onClick={this.handleChange}
 				ref={entry => this.entries.push(entry)}
 				title={e.title}
@@ -122,7 +123,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 			if (e === null) {
 				continue;
 			}
-			e.setType(e.props.id === id ? "active" : "inactive");
+			e.setType(e.props.identifier === id ? "active" : "inactive");
 		}
 	}
 }

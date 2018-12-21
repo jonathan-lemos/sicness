@@ -7,7 +7,8 @@
 
 import React from "react";
 import { Container } from "reactstrap";
-import { DsCompiler, KeyBindingsType } from "./DsCompiler";
+import { KeyBindingsType } from "./DsAceEditor";
+import { DsCompiler } from "./DsCompiler";
 import { DsDebugger } from "./DsDebugger";
 import { DsFooter } from "./DsFooter";
 import { DsNavbar, IDsNavEntry } from "./DsNavbar";
@@ -42,7 +43,7 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 
 		this.state = {
 			active: "compiler",
-			compKeyBindings: "",
+			compKeyBindings: null,
 		};
 
 		this.getActive = this.getActive.bind(this);
@@ -75,9 +76,19 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 	}
 
 	public render() {
-		const content = this.getActive() === "compiler" ?
-			<DsCompiler ref={c => this.compiler = c} /> :
-			<DsDebugger ref={d => this.debugger = d} />;
+		let content: JSX.Element;
+		switch (this.getActive()) {
+			case "compiler":
+				content = <DsCompiler ref={c => this.compiler = c} />;
+				this.debugger = null;
+				break;
+			case "debugger":
+				content = <DsDebugger ref={d => this.debugger = d} />;
+				this.compiler = null;
+				break;
+			default:
+				throw new Error(`Invalid getActive: ${this.getActive}`);
+		}
 
 		const entries = [
 			{
@@ -121,7 +132,7 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 			output = output.concat(sicc.makeLst());
 			output = output.concat(["", "", "-----obj-----"]);
 			output = output.concat(sicc.makeObj());
-			this.compiler.setOutputText(output.reduce((a, v) => a + "\n" + v, ""));
+			this.compiler.setOutputText(output.reduce((a, v) => a + "\n" + v));
 		}
 		catch (e) {
 			alert((e as Error).message);

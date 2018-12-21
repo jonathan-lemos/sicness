@@ -11,7 +11,7 @@ import { ActiveType } from "./DsApp";
 export type DsNavbarThemeType = "default" | "dark" | "danger" | "warning" | "success";
 
 export interface IDsNavbarButtonProps {
-	id: ActiveType | null;
+	identifier: ActiveType | null;
 	onClick: (id: ActiveType) => void;
 	theme: DsNavbarThemeType;
 	title: string;
@@ -19,14 +19,14 @@ export interface IDsNavbarButtonProps {
 
 export class DsNavbarActionButton extends React.Component<IDsNavbarButtonProps> {
 	public static defaultProps: IDsNavbarButtonProps = {
-		id: null,
+		identifier: null,
 		onClick: (id: ActiveType) => {/** */},
 		theme: "default",
 		title: "",
 	};
 
 	constructor(props: IDsNavbarButtonProps) {
-		if (props.id === null) {
+		if (props.identifier === null) {
 			throw new Error("This DsNavbarActionButton needs an ID");
 		}
 		super(props);
@@ -44,6 +44,6 @@ export class DsNavbarActionButton extends React.Component<IDsNavbarButtonProps> 
 	}
 
 	private handleClick(event: React.MouseEvent<HTMLButtonElement>) {
-		this.props.onClick(this.props.id as ActiveType);
+		this.props.onClick(this.props.identifier as ActiveType);
 	}
 }

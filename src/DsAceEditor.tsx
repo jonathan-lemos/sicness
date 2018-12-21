@@ -5,32 +5,45 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
-import * as ace from "brace";
+import "brace";
 import React from "react";
 import "./mode-sicxe";
 
+export type KeyBindingsType = null | "vim" | "emacs";
+
 export interface IDsAceEditorProps {
 	id: string;
-}
-
-export interface IDsAceEditorState {
+	keyBindings: KeyBindingsType;
 	value: string;
 }
 
-export class DsFooter extends React.Component<IDsAceEditorProps, IDsAceEditorState>{
+export interface IDsAceEditorState {
+	keyBindings: KeyBindingsType;
+	value: string;
+}
+
+export class DsAceEditor extends React.Component<IDsAceEditorProps, IDsAceEditorState> {
 	public static defaultProps: IDsAceEditorProps = {
 		id: "editor",
+		keyBindings: null,
+		value: "qqq",
 	};
 
-	private editor: ace.Editor | null;
+	private editor: AceAjax.Editor | null;
 
 	constructor(props: IDsAceEditorProps) {
 		super(props);
-		this.state = {value: ""};
+		this.state = {
+			keyBindings: this.props.keyBindings,
+			value: this.props.value,
+		};
 		this.editor = null;
 
+		this.getKeyBindings = this.getKeyBindings.bind(this);
+		this.setKeyBindings = this.setKeyBindings.bind(this);
 		this.getValue = this.getValue.bind(this);
 		this.setValue = this.setValue.bind(this);
+		this.copyState = this.copyState.bind(this);
 		this.changeHandler = this.changeHandler.bind(this);
 	}
 
@@ -49,6 +62,22 @@ export class DsFooter extends React.Component<IDsAceEditorProps, IDsAceEditorSta
 		this.editor.setTheme("ace/theme/monokai");
 		this.editor.getSession().setMode("ace/theme/sicxe");
 		this.editor.getSession().on("change", this.changeHandler);
+		this.editor.setKeyboardHandler(this.state.keyBindings === null ? "" : this.state.keyBindings);
+		this.editor.setValue(this.state.value);
+	}
+
+	public getKeyBindings(): KeyBindingsType {
+		return this.state.keyBindings;
+	}
+
+	public setKeyBindings(k: KeyBindingsType): void {
+		const q = this.copyState();
+		q.keyBindings = k;
+		this.setState(q);
+
+		if (this.editor !== null) {
+			this.editor.setKeyboardHandler(k === null ? "" : k);
+		}
 	}
 
 	public getValue(): string {
@@ -56,18 +85,28 @@ export class DsFooter extends React.Component<IDsAceEditorProps, IDsAceEditorSta
 	}
 
 	public setValue(s: string): void {
-		this.setState({value: s});
+		const q = this.copyState();
+		q.value = s;
+		this.setState(q);
 
-		if (this.editor === null) {
-			return;
+		if (this.editor !== null) {
+			this.editor.setValue(s);
 		}
-		this.editor.setValue(s);
+	}
+
+	private copyState(): IDsAceEditorState {
+		return {
+			keyBindings: this.state.keyBindings,
+			value: this.state.value,
+		};
 	}
 
 	private changeHandler(): void {
 		if (this.editor === null) {
 			return;
 		}
-		this.setState({value: this.editor.getValue()});
+		const q = this.copyState();
+		q.value = this.editor.getValue();
+		this.setState(q);
 	}
 }

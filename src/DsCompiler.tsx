@@ -5,49 +5,47 @@
  * of the MIT license.  See the LICENSE file for details.
  */
 
-import brace from "brace";
 import React from "react";
-import AceEditor from "react-ace";
 import { Col, Row } from "reactstrap";
-
-import "./mode-sicxe";
-
-export type KeyBindingsType = "" | "vim" | "emacs";
+import { DsAceEditor, KeyBindingsType } from "./DsAceEditor";
 
 export interface IDsCompilerProps {
+	editorKeyBindings: KeyBindingsType;
 	editorValue: string;
-	keyBindings: KeyBindingsType;
 	outputValue: string;
 }
 
 export interface IDsCompilerState {
+	editorKeyBindings: KeyBindingsType;
 	editorState: string;
-	keyBindings: KeyBindingsType;
 	outputState: string;
 }
 
 export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerState> {
 	public static defaultProps: IDsCompilerProps = {
+		editorKeyBindings: null,
 		editorValue: "",
-		keyBindings: "",
 		outputValue: "",
 	};
+
+	private editor: DsAceEditor | null;
 
 	constructor(props: IDsCompilerProps) {
 		super(props);
 		this.state = {
-			editorState: this.props.editorValue,
-			keyBindings: this.props.keyBindings,
+			editorKeyBindings: null,
+			editorState: "",
 			outputState: this.props.outputValue,
 		};
+
+		this.editor = null;
 
 		this.getEditorText = this.getEditorText.bind(this);
 		this.setEditorText = this.setEditorText.bind(this);
 		this.getOutputText = this.getOutputText.bind(this);
 		this.setOutputText = this.setOutputText.bind(this);
-		this.getKeyBindings = this.getKeyBindings.bind(this);
-		this.setKeyBindings = this.setKeyBindings.bind(this);
-		this.handleEditorChange = this.handleEditorChange.bind(this);
+		this.getEditorKeyBindings = this.getEditorKeyBindings.bind(this);
+		this.setEditorKeyBindings = this.setEditorKeyBindings.bind(this);
 		this.handleOutputChange = this.handleOutputChange.bind(this);
 		this.copyState = this.copyState.bind(this);
 	}
@@ -56,8 +54,8 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 		return this.state.editorState;
 	}
 
-	public getKeyBindings() {
-		return this.state.keyBindings;
+	public getEditorKeyBindings() {
+		return this.state.editorKeyBindings;
 	}
 
 	public getOutputText() {
@@ -68,12 +66,18 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 		const q = this.copyState();
 		q.editorState = s;
 		this.setState(q);
+		if (this.editor !== null) {
+			this.editor.setValue(s);
+		}
 	}
 
-	public setKeyBindings(s: KeyBindingsType): void {
+	public setEditorKeyBindings(s: KeyBindingsType): void {
 		const q = this.copyState();
-		q.keyBindings = s;
+		q.editorKeyBindings = s;
 		this.setState(q);
+		if (this.editor !== null) {
+			this.editor.setKeyBindings(s);
+		}
 	}
 
 	public setOutputText(s: string) {
@@ -86,13 +90,11 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 		return (
 			<Row className="bg-dark flex d-flex justify-content-start flex-fill">
 				<Col>
-					<AceEditor
-						mode="brace/mode/sicxe"
-						theme="brace/mode/monokai"
-						name="editor"
-						keyboardHandler={this.state.keyBindings}
+					<DsAceEditor
+						id="editor"
+						keyBindings={this.state.editorKeyBindings}
+						ref={e => this.editor = e}
 						value={this.state.editorState}
-						onChange={this.handleEditorChange}
 					/>
 				</Col>
 				<Col>
@@ -110,18 +112,14 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 		);
 	}
 
-	private handleEditorChange(value: string, event?: any): void {
-		this.setEditorText(value);
-	}
-
 	private handleOutputChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
 		this.setOutputText(event.target.value);
 	}
 
 	private copyState(): IDsCompilerState {
 		return {
+			editorKeyBindings: this.state.editorKeyBindings,
 			editorState: this.state.editorState,
-			keyBindings: this.state.keyBindings,
 			outputState: this.state.outputState,
 		};
 	}
