@@ -6,8 +6,9 @@
  */
 
 import "brace";
+import "brace/mode/sicxe";
+import "brace/theme/monokai";
 import React from "react";
-import "./mode-sicxe";
 
 export type KeyBindingsType = null | "vim" | "emacs";
 
@@ -26,7 +27,7 @@ export class DsAceEditor extends React.Component<IDsAceEditorProps, IDsAceEditor
 	public static defaultProps: IDsAceEditorProps = {
 		id: "editor",
 		keyBindings: null,
-		value: "qqq",
+		value: "",
 	};
 
 	private editor: AceAjax.Editor | null;
@@ -60,7 +61,7 @@ export class DsAceEditor extends React.Component<IDsAceEditorProps, IDsAceEditor
 
 		this.editor = ace.edit(this.props.id);
 		this.editor.setTheme("ace/theme/monokai");
-		this.editor.getSession().setMode("ace/theme/sicxe");
+		this.editor.getSession().setMode("ace/mode/sicxe");
 		this.editor.getSession().on("change", this.changeHandler);
 		this.editor.setKeyboardHandler(this.state.keyBindings === null ? "" : this.state.keyBindings);
 		this.editor.setValue(this.state.value);

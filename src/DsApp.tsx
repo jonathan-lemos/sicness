@@ -6,12 +6,11 @@
 */
 
 import React from "react";
-import { Container } from "reactstrap";
 import { KeyBindingsType } from "./DsAceEditor";
 import { DsCompiler } from "./DsCompiler";
 import { DsDebugger } from "./DsDebugger";
 import { DsFooter } from "./DsFooter";
-import { DsNavbar, IDsNavEntry } from "./DsNavbar";
+import { DsNavbar } from "./DsNavbar";
 import { SicCompiler } from "./SicCompiler/SicCompiler";
 
 export interface IDsAppProps {
@@ -26,7 +25,7 @@ export interface IDsAppState {
 	compKeyBindings: KeyBindingsType;
 }
 
-export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
+export class DsApp extends React.Component<IDsAppProps, IDsAppState> {
 	public static defaultProps: IDsAppProps = {
 		brand: "down with the SICness",
 		font: "Comic Sans MS",
@@ -106,17 +105,18 @@ export class DsApp extends React.Component<IDsAppProps, IDsAppState>{
 		];
 
 		return (
-			<Container className="container-fluid bg-dark d-flex h-100 flex-column">
+			<div className="container-fluid bg-dark d-flex h-100 flex-column">
 				<DsNavbar
 					brand={this.props.brand}
 					entries={entries}
 					font={this.props.font}
 					href={this.props.href}
+					onChangeActive={this.setActive}
 					ref={nav => this.navbar = nav}
 				/>
 				{content}
 				<DsFooter ref={f => this.footer = f} />
-			</Container>
+			</div>
 		);
 	}
 

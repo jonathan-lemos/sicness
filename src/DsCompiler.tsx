@@ -51,7 +51,7 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 	}
 
 	public getEditorText() {
-		return this.state.editorState;
+		return this.editor === null ? "" : this.editor.getValue();
 	}
 
 	public getEditorKeyBindings() {
@@ -63,9 +63,6 @@ export class DsCompiler extends React.Component<IDsCompilerProps, IDsCompilerSta
 	}
 
 	public setEditorText(s: string): void {
-		const q = this.copyState();
-		q.editorState = s;
-		this.setState(q);
 		if (this.editor !== null) {
 			this.editor.setValue(s);
 		}

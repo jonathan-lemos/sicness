@@ -21,6 +21,7 @@ export interface IDsNavbarProps {
 	entries: IDsNavEntry[];
 	font: string;
 	href: string;
+	onChangeActive: ((a: ActiveType) => void) | null;
 }
 
 export interface IDsNavbarState {
@@ -33,6 +34,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 		entries: [],
 		font: "Comic Sans MS",
 		href: "#",
+		onChangeActive: null,
 	};
 
 	private entries: Array<DsNavbarEntry | null>;
@@ -63,7 +65,7 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 	public render() {
 		return (
 			<Navbar className="navbar navbar-expand-md navbar-dark bg-dark">
-				<NavbarBrand href="#" style={{fontFace: this.props.font}}>
+				<NavbarBrand href="#">
 					{this.props.brand}
 				</NavbarBrand>
 				<button
@@ -124,6 +126,9 @@ export class DsNavbar extends React.Component<IDsNavbarProps, IDsNavbarState>{
 				continue;
 			}
 			e.setType(e.props.identifier === id ? "active" : "inactive");
+		}
+		if (this.props.onChangeActive !== null) {
+			this.props.onChangeActive(id);
 		}
 	}
 }

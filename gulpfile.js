@@ -15,19 +15,22 @@ var gulp        = require("gulp");
 
 var tsProject = tsc.createProject("tsconfig.json");
 
-gulp.task("build-app", function() {
+gulp.task("copy-mode-sicxe", function() {
+    return gulp.src("src/sicxe.js")
+        .pipe(gulp.dest("node_modules/brace/mode/sicxe"))
+})
+
+gulp.task("build-app", gulp.series("copy-mode-sicxe", function () {
     return gulp.src([
-        "src/**/*.js",
         "src/**/*.ts",
         "src/**/*.tsx",
     ])
-    .pipe(tsProject())
-    .js.pipe(gulp.dest("dist"));
-});
+        .pipe(tsProject())
+        .js.pipe(gulp.dest("dist"));
+}));
 
-gulp.task("lint", function() {
+gulp.task("lint", function () {
     return gulp.src([
-        "src/**/*.js",
         "src/**/*.ts",
         "src/**/*.tsx",
         "tests/*.ts",
@@ -39,7 +42,7 @@ gulp.task("lint", function() {
         .pipe(tslint.report());
 });
 
-gulp.task("bundle", function() {
+gulp.task("bundle", function () {
     var libraryName = "sicness";
     var mainTsFilePath = "dist/app.js";
     var outputFolder = "docs/";
@@ -55,7 +58,7 @@ gulp.task("bundle", function() {
         .pipe(source(outputFileName))
         .pipe(buffer())
         .pipe(sourcemaps.init({ loadMaps: true }))
-//        .pipe(uglify())
+        .pipe(uglify())
         .pipe(sourcemaps.write('./'))
         .pipe(gulp.dest(outputFolder));
 });
@@ -72,7 +75,7 @@ gulp.task("bundle", function() {
 
 var tsTestProject = tsc.createProject("tsconfig.json");
 
-gulp.task("build-test", function() {
+gulp.task("build-test", function () {
     return gulp.src([
         "tests/*.ts",
         "test/*.tsx",
@@ -81,13 +84,13 @@ gulp.task("build-test", function() {
         .js.pipe(gulp.dest("dist"));
 });
 
-gulp.task("istanbul:hook", function() {
+gulp.task("istanbul:hook", function () {
     return gulp.src(["dist/*.js"])
         .pipe(istanbul())
         .pipe(istanbul.hookRequire());
 });
 
-gulp.task("test", gulp.series("build-test", "istanbul:hook", function() {
+gulp.task("test", gulp.series("build-test", "istanbul:hook", function () {
     return gulp.src("dist/*.test.js")
         .pipe(mocha({ ui: "bdd" }))
         .pipe(istanbul.writeReports());
